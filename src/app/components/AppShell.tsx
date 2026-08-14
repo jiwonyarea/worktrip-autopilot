@@ -1,5 +1,6 @@
 import { User, Settings } from "lucide-react";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
+import gnbLogo from "../../assets/brand/worktrip-autopilot-gnb.svg";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -24,10 +25,11 @@ export function AppShell({ children, currentNav = "Trips", onNavChange, onLogoCl
             onClick={onLogoClick}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
           >
-            <h1 className="font-['Poppins:Medium',sans-serif] text-[#1F2933] m-0 text-lg tracking-[-0.05em]">
-              <span className="text-[#0A0A0A] font-[Poppins]">WorkTrip</span>{" "}
-              <span className="text-[#916af5] font-[Poppins]">Autopilot</span>
-            </h1>
+            <img
+              src={gnbLogo}
+              alt="Worktrip Autopilot"
+              className="h-[26px] w-auto"
+            />
           </button>
           
           <nav className="flex gap-6">

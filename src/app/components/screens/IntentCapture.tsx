@@ -6,7 +6,7 @@ import { Badge } from "../ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Trip, createTrip, updateTrip, parseIntentText } from "../../utils/tripApi";
 import { motion } from "motion/react";
-import svgPaths from "../../imports/svg-8jn7paqll6";
+import heroLogo from "../../../assets/brand/worktrip-autopilot-mark.svg";
 
 interface IntentCaptureProps {
   onStartPlanning: (tripId: string, trip: Trip) => void;
@@ -195,19 +195,11 @@ export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
       <div className="relative z-10 max-w-[1088px] mx-auto px-6 pt-[112px]">
         {/* Centered Worktrip Autopilot Logo */}
         <div className="text-center mb-12">
-          <div className="inline-block relative">
-            <h1 className="capitalize font-['Poppins:Medium',sans-serif] text-[58px] leading-[55px] tracking-[-2.92px] mb-0">
-              <span className="text-white font-[Poppins] font-bold">Worktrip</span>
-              <br />
-              <span className="text-[#916af5] font-[Poppins] font-bold">Autopilot</span>
-            </h1>
-            {/* Underline SVG */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-[110px] w-[152px] h-[14px]">
-              <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 152.768 14.0571">
-                <path d={svgPaths.p318e5100} stroke="#916AF5" strokeWidth="4.9144" />
-              </svg>
-            </div>
-          </div>
+          <img
+            src={heroLogo}
+            alt="Worktrip Autopilot"
+            className="inline-block w-[244px] max-w-full h-auto"
+          />
         </div>
 
         {/* Main Search Bar */}
