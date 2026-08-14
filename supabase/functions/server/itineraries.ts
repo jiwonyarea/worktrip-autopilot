@@ -192,6 +192,23 @@ export async function generateItineraries(tripId: string) {
     ].filter(Boolean),
   };
 
+  // What the search actually returned. Surfaced so a flat set of prices across
+  // the three options can be told apart from the agent collapsing them.
+  const prices = flights.outboundOptions.map((o) => o.roundTripPrice).filter((p) => p > 0);
+  const inventory = {
+    outbound_options: flights.outboundOptions.length,
+    return_options: flights.returnOptions.length,
+    hotels: hotels.length,
+    flight_price_low: prices.length ? Math.min(...prices) : 0,
+    flight_price_high: prices.length ? Math.max(...prices) : 0,
+    distinct_flight_prices: [...new Set(prices)].sort((a, b) => a - b),
+    hotel_price_low: hotels.length ? Math.round(hotels[0].pricePerNight) : 0,
+    hotel_price_high: hotels.length
+      ? Math.round(hotels[hotels.length - 1].pricePerNight)
+      : 0,
+  };
+  console.log("Inventory:", JSON.stringify(inventory));
+
   const options = await synthesizeItineraries(payload);
 
   const itineraries = options.map((option, index) => ({
@@ -222,5 +239,5 @@ export async function generateItineraries(tripId: string) {
       `(${originCode}->${destinationCode}, ${flights.outboundOptions.length} outbound options, ${hotels.length} hotels)`,
   );
 
-  return { itineraries };
+  return { itineraries, inventory };
 }
