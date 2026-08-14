@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Mic, MapPin, Calendar, Users, Briefcase, Sparkles, Loader2, Plane, Hotel, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import { Trip, createTrip, updateTrip, getTrip } from "../../utils/tripApi";
+import { Trip, createTrip, updateTrip, parseIntentText } from "../../utils/tripApi";
 import { motion } from "motion/react";
 import svgPaths from "../../imports/svg-8jn7paqll6";
 
@@ -23,6 +23,7 @@ interface ParsedFields {
   };
   travelers_count?: number;
   trip_name?: string;
+  purpose?: string;
 }
 
 // Helper function to format date string without timezone conversion
@@ -55,110 +56,59 @@ export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [serverTrip, setServerTrip] = useState<Trip | null>(null);
   const [parsedFields, setParsedFields] = useState<ParsedFields | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const parseTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Enhanced parser - keeping the existing parsing logic
-  const parseIntent = (intentText: string): ParsedFields => {
-    const overrides: any = {};
-    
-    // Extract origin and destination
-    const fromToMatch = intentText.match(/\bfrom\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*|[A-Z]{2,4})\s+to\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*|[A-Z]{2,4})(?:\s+from|\s+for|\s+of|\s+\d|,|\.|!|$)/i);
-    
-    if (fromToMatch && fromToMatch[1] && fromToMatch[2]) {
-      overrides.origin_city = fromToMatch[1].trim();
-      overrides.destination = fromToMatch[2].trim();
-    } else {
-      const destinationMatch = intentText.match(/(?:to|in)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][a-z]+)*|[A-Z]{2,4})(?:\s+for|,|with|\s+next|\s+this|\s+on|\s+Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December|\s+\d|$)/i);
-      if (destinationMatch && destinationMatch[1]) {
-        overrides.destination = destinationMatch[1].trim();
-      }
-    }
-
-    // Extract traveler count
-    const forCountMatch = intentText.match(/\bfor\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:passenger|people|person|traveler|teammate|attendee)s?\b/i);
-    if (forCountMatch && forCountMatch[1]) {
-      const wordNumberMap: { [key: string]: number } = {
-        'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 
-        'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10
-      };
-      const countStr = forCountMatch[1];
-      overrides.travelers_count = wordNumberMap[countStr.toLowerCase()] || parseInt(countStr, 10);
-    }
-
-    // Extract dates
-    const currentYear = new Date().getFullYear();
-    const fullDateWithYearMatch = intentText.match(/(?:from\s+)?(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:\s+to\s+|\s*[-–—]\s*)(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:\s+of\s+|\s*,\s*)?(\d{4})/i);
-    
-    if (fullDateWithYearMatch) {
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      const monthAbbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      
-      const startMonthName = fullDateWithYearMatch[1];
-      const startDay = parseInt(fullDateWithYearMatch[2], 10);
-      const endMonthName = fullDateWithYearMatch[3];
-      const endDay = parseInt(fullDateWithYearMatch[4], 10);
-      const explicitYear = parseInt(fullDateWithYearMatch[5], 10);
-      
-      let startMonthIndex = monthAbbr.findIndex(m => m.toLowerCase() === startMonthName.toLowerCase());
-      if (startMonthIndex === -1) {
-        startMonthIndex = monthNames.findIndex(m => m.toLowerCase() === startMonthName.toLowerCase());
-      }
-      
-      let endMonthIndex = monthAbbr.findIndex(m => m.toLowerCase() === endMonthName.toLowerCase());
-      if (endMonthIndex === -1) {
-        endMonthIndex = monthNames.findIndex(m => m.toLowerCase() === endMonthName.toLowerCase());
-      }
-      
-      if (startMonthIndex !== -1 && endMonthIndex !== -1) {
-        const startMonth = String(startMonthIndex + 1).padStart(2, '0');
-        const startDayStr = String(startDay).padStart(2, '0');
-        const endMonth = String(endMonthIndex + 1).padStart(2, '0');
-        const endDayStr = String(endDay).padStart(2, '0');
-        
-        overrides.dates = {
-          start_date: `${explicitYear}-${startMonth}-${startDayStr}`,
-          end_date: `${explicitYear}-${endMonth}-${endDayStr}`,
-        };
-      }
-    }
-
-    // Extract trip purpose
-    const explicitPurposeMatch = intentText.match(/\bpurpose\s+of\s+(?:this|the)\s+trip\s+is\s+(?:a\s+)?(\w+(?:\s+\w+)?)/i);
-    if (explicitPurposeMatch && explicitPurposeMatch[1]) {
-      const purposeText = explicitPurposeMatch[1].toLowerCase();
-      if (purposeText.includes('conference')) {
-        overrides.trip_name = "Conference Trip";
-      } else if (purposeText.includes('client') || purposeText.includes('visit') || purposeText.includes('meeting')) {
-        overrides.trip_name = "Client Visit";
-      } else if (purposeText.includes('offsite')) {
-        overrides.trip_name = "Team Offsite";
-      }
-    }
-
-    return overrides;
-  };
-
-  // Debounced parsing effect
+  // Intent parsing runs server-side (Claude), so phrasings and relative dates
+  // that a regex can't handle — "next Tuesday", "the week of the 12th" — work.
+  // Debounced while typing; the result also gates the Generate button.
   useEffect(() => {
-    if (parseTimeoutRef.current) {
-      clearTimeout(parseTimeoutRef.current);
-    }
+    if (parseTimeoutRef.current) clearTimeout(parseTimeoutRef.current);
 
-    if (!intent.trim()) {
+    const text = intent.trim();
+    if (text.length < 12) {
       setParsedFields(null);
+      setIsParsing(false);
+      setParseError(null);
       return;
     }
 
-    parseTimeoutRef.current = setTimeout(() => {
-      const parsed = parseIntent(intent);
-      setParsedFields(parsed);
-    }, 500);
+    setIsParsing(true);
+    setParseError(null);
+
+    // Only the newest request may write state — earlier ones are stale.
+    let cancelled = false;
+    parseTimeoutRef.current = setTimeout(async () => {
+      try {
+        const parsed = await parseIntentText(text);
+        if (cancelled) return;
+        setParsedFields({
+          origin_city: parsed.origin_city || undefined,
+          destination: parsed.destination_city || undefined,
+          dates:
+            parsed.start_date && parsed.end_date
+              ? { start_date: parsed.start_date, end_date: parsed.end_date }
+              : undefined,
+          travelers_count: parsed.travelers_count || 1,
+          trip_name: parsed.trip_name || undefined,
+          purpose: parsed.purpose || undefined,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setParsedFields(null);
+        setParseError(
+          error instanceof Error ? error.message : "Could not read those details",
+        );
+      } finally {
+        if (!cancelled) setIsParsing(false);
+      }
+    }, 700);
 
     return () => {
-      if (parseTimeoutRef.current) {
-        clearTimeout(parseTimeoutRef.current);
-      }
+      cancelled = true;
+      if (parseTimeoutRef.current) clearTimeout(parseTimeoutRef.current);
     };
   }, [intent]);
 
@@ -169,84 +119,54 @@ export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
     }, 100);
   };
 
-  const isMissingCriticalFields = parsedFields && (!parsedFields.destination || !parsedFields.dates);
+  const isMissingCriticalFields =
+    parsedFields && (!parsedFields.destination || !parsedFields.dates || !parsedFields.origin_city);
 
   const handleSubmit = async () => {
     if (!intent.trim()) {
-      toast.error("Please describe your trip");
+      toast.error("Tell me about the trip first");
+      return;
+    }
+    if (!parsedFields?.destination) {
+      toast.error("Which city is the trip to?");
       return;
     }
 
     setIsCreating(true);
 
     try {
-      const parsedOverrides = parseIntent(intent);
-      
-      if (!parsedOverrides.destination) {
-        toast.error("Please specify a destination city in your trip description");
-        setIsCreating(false);
-        return;
-      }
-      
-      const payload = {
-        intentText: intent,
-        overrides: parsedOverrides,
-        organizer_name: "Sarah Chen",
-        organizer_email: "sarah.chen@company.com",
-      };
-
-      let trip: Trip;
-      
-      try {
-        if (serverTrip) {
-          trip = await updateTrip(serverTrip.id, {
+      const trip = serverTrip
+        ? await updateTrip(serverTrip.id, {
             intent_text: intent,
-            ...parsedOverrides,
+            destination: parsedFields.destination,
+            origin_city: parsedFields.origin_city,
+            start_date: parsedFields.dates?.start_date,
+            end_date: parsedFields.dates?.end_date,
+            trip_name: parsedFields.trip_name,
+            purpose: parsedFields.purpose,
+          })
+        : await createTrip({
+            intentText: intent,
+            destination: parsedFields.destination,
+            origin_city: parsedFields.origin_city,
+            start_date: parsedFields.dates?.start_date,
+            end_date: parsedFields.dates?.end_date,
+            travelers_count: parsedFields.travelers_count,
+            trip_name: parsedFields.trip_name,
+            purpose: parsedFields.purpose,
+            organizer_name: "Sarah Chen",
+            organizer_email: "sarah.chen@company.com",
           });
-          toast.success("Trip updated successfully!");
-        } else {
-          trip = await createTrip(payload);
-          toast.success("Trip created successfully!");
-        }
-      } catch (apiError) {
-        // toast.info("Demo Mode", {
-        //   description: "Using mock data for demonstration purposes"
-        // });
-        
-        trip = {
-          id: `demo-trip-${Date.now()}`,
-          organizer_id: null,
-          organizer_name: payload.organizer_name || "Sarah Chen",
-          organizer_email: payload.organizer_email || "sarah.chen@company.com",
-          intent_text: intent,
-          inferred_trip_name: parsedOverrides.trip_name || null,
-          inferred_destination: parsedOverrides.destination || null,
-          inferred_dates: parsedOverrides.dates || null,
-          trip_name: parsedOverrides.trip_name || `Trip to ${parsedOverrides.destination}`,
-          destination: parsedOverrides.destination || "",
-          start_date: parsedOverrides.dates?.start_date || null,
-          end_date: parsedOverrides.dates?.end_date || null,
-          purpose: parsedOverrides.trip_name || "Business Trip",
-          budget_per_person: null,
-          total_budget: null,
-          autonomy_level: "medium",
-          travelers: [],
-          survey_config: null,
-          status: "planning" as const,
-          selected_itinerary_id: null,
-          confirmations: null,
-          booked_at: null,
-          itineraries: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-      }
 
       setServerTrip(trip);
       onStartPlanning(trip.id, trip);
     } catch (error) {
-      toast.error(`Failed to ${serverTrip ? "update" : "create"} trip.`);
-      console.error(error);
+      // Surface the real failure rather than substituting placeholder data —
+      // a fake trip here just moves the error to a later, more confusing screen.
+      console.error("Trip creation failed:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Could not start planning this trip",
+      );
     } finally {
       setIsCreating(false);
     }
@@ -295,13 +215,37 @@ export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
           </div>
         </div>
 
+        {/* Reading state — the parse round-trips to the agent, so say so. */}
+        {isParsing && !parsedFields && (
+          <div className="max-w-[710px] mx-auto mb-6">
+            <div className="bg-white/60 backdrop-blur-sm border border-white/50 rounded-2xl shadow-sm p-5 flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin text-[#916AF5]" />
+              <span className="text-sm text-gray-700">Reading your trip details…</span>
+            </div>
+          </div>
+        )}
+
+        {parseError && !isParsing && (
+          <div className="max-w-[710px] mx-auto mb-6">
+            <div className="bg-white/60 backdrop-blur-sm border border-amber-200 rounded-2xl shadow-sm p-5 flex items-center gap-3">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="text-sm text-gray-700">{parseError}</span>
+            </div>
+          </div>
+        )}
+
         {/* Parsed Fields Preview (appears under search when text is filled) */}
         {parsedFields && intent.trim() && (
           <div className="max-w-[710px] mx-auto mb-6">
             <div className="bg-white/60 backdrop-blur-sm border border-white/50 rounded-2xl shadow-sm p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  {isMissingCriticalFields ? (
+                  {isParsing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#916AF5]" />
+                      <span className="text-sm text-gray-700 font-medium">Updating…</span>
+                    </>
+                  ) : isMissingCriticalFields ? (
                     <>
                       <AlertCircle className="w-4 h-4 text-amber-600" />
                       <span className="text-sm text-gray-700 font-medium">Missing required details</span>
@@ -314,17 +258,19 @@ export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
                   )}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
-                {parsedFields.origin_city && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#4a5565]" />
-                    <div>
-                      <p className="text-xs text-gray-500 m-0">From</p>
-                      <p className="text-sm text-gray-900 m-0">{parsedFields.origin_city}</p>
-                    </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#4a5565]" />
+                  <div>
+                    <p className="text-xs text-gray-500 m-0">From</p>
+                    <p className="text-sm text-gray-900 m-0">
+                      {parsedFields.origin_city || (
+                        <span className="text-amber-600">Not detected</span>
+                      )}
+                    </p>
                   </div>
-                )}
+                </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-[#4a5565]" />
                   <div>
@@ -362,7 +308,7 @@ export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <Button
                   onClick={handleSubmit}
-                  disabled={!intent.trim() || isCreating || isMissingCriticalFields}
+                  disabled={!intent.trim() || isCreating || isParsing || !!isMissingCriticalFields}
                   className="w-full bg-[#916AF5] hover:bg-[#7c5dd4] text-white rounded-full py-[22px] px-[12px]"
                 >
                   {isCreating ? (

@@ -2,7 +2,7 @@ import { Upload, Download, Check, AlertCircle, Receipt } from "lucide-react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { StatusBadge } from "../StatusBadge";
-import { projectId, publicAnonKey } from "../../utils/supabase/info";
+import { supabaseUrl, publicAnonKey } from "../../utils/supabase/info";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { createClient } from "@supabase/supabase-js";
@@ -33,7 +33,7 @@ export function ExpensesReport({ tripId = "default-trip", onBack }: ExpensesRepo
   
   // Initialize Supabase client
   const supabase = createClient(
-    `https://${projectId}.supabase.co`,
+    supabaseUrl,
     publicAnonKey
   );
 
@@ -119,25 +119,36 @@ export function ExpensesReport({ tripId = "default-trip", onBack }: ExpensesRepo
       const receiptUrl = urlData.publicUrl;
       console.log("Receipt URL:", receiptUrl);
 
-      toast.loading("Processing receipt with AI...", { id: uploadToastId });
+      toast.loading("Reading the receipt...", { id: uploadToastId });
 
-      // Call processReceipt Edge Function
-      const processResponse = await supabase.functions.invoke("processReceipt", {
-        body: {
-          tripId,
-          receiptUrl,
+      // The agent reads the image and files the expense in one call.
+      const processResponse = await fetch(
+        `${supabaseUrl}/functions/v1/server/trips/${tripId}/expenses/upload-receipt`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+          body: JSON.stringify({ receiptUrl }),
         },
-      });
+      );
 
-      if (processResponse.error) {
-        console.error("Process receipt error:", processResponse.error);
-        throw new Error(processResponse.error.message || "Failed to process receipt");
+      const processData = await processResponse.json().catch(() => ({}));
+
+      if (!processResponse.ok) {
+        throw new Error(processData.error || "Could not read that receipt");
       }
 
-      const { expense } = processResponse.data;
-      
+      const { expense, notes } = processData;
+
       if (!expense) {
         throw new Error("No expense data returned from processing");
+      }
+
+      // The model flags anything it could not read cleanly.
+      if (notes) {
+        toast.warning(`Filed, but check it: ${notes}`);
       }
 
       console.log("Receipt processed successfully:", expense);

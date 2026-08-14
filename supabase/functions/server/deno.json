@@ -1,0 +1,10 @@
+{
+  "nodeModulesDir": "auto",
+  "imports": {
+    "hono": "npm:hono@4",
+    "hono/cors": "npm:hono@4/cors",
+    "hono/logger": "npm:hono@4/logger",
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@0.116.0",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2"
+  }
+}

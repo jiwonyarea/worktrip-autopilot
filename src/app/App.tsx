@@ -12,7 +12,6 @@ import { AppShell } from "./components/AppShell";
 import { Toaster } from "./components/ui/sonner";
 import { Trip } from "./utils/tripApi";
 import "../styles/globals.css";
-import "./utils/backendTests"; // Load backend tests for console access
 
 type Screen = 
   | "intent-capture"

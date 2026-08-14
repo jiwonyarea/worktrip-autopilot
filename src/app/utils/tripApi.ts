@@ -1,17 +1,60 @@
-import { projectId, publicAnonKey } from './supabase/info';
+import { supabaseUrl, publicAnonKey } from './supabase/info';
 
-const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/server/make-server-97df1df1`;
+const API_BASE_URL = `${supabaseUrl}/functions/v1/server`;
+
+/** Shared fetch wrapper: attaches auth and surfaces the API's error message. */
+async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${publicAnonKey}`,
+      ...(init.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Request failed: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export interface ParsedIntent {
+  origin_city: string;
+  destination_city: string;
+  start_date: string;
+  end_date: string;
+  travelers_count: number;
+  trip_name: string;
+  purpose: string;
+  missing_fields: string[];
+}
+
+/**
+ * Parse a traveler's free-text request into trip fields.
+ * Runs server-side via Claude, so it handles phrasings and relative dates
+ * ("next Tuesday", "the week of the 12th") that a regex cannot.
+ */
+export async function parseIntentText(intentText: string): Promise<ParsedIntent> {
+  return apiFetch<ParsedIntent>('/parse-intent', {
+    method: 'POST',
+    body: JSON.stringify({ intentText }),
+  });
+}
 
 interface CreateTripPayload {
   intentText: string;
-  overrides?: {
-    trip_name?: string;
-    destination?: string;
-    dates?: {
-      start_date?: string;
-      end_date?: string;
-    };
-  };
+  destination: string;
+  origin_city?: string;
+  start_date?: string;
+  end_date?: string;
+  travelers_count?: number;
+  trip_name?: string;
+  purpose?: string;
+  budget_per_person?: number;
+  total_budget?: number;
   organizer_name?: string;
   organizer_email?: string;
 }
@@ -69,106 +112,45 @@ export interface Trip {
   updated_at: string;
 }
 
-/**
- * Create a new trip from intent
- */
+/** Create a new trip from a parsed intent. */
 export async function createTrip(payload: CreateTripPayload): Promise<Trip> {
-  const response = await fetch(`${API_BASE_URL}/trips`, {
+  return apiFetch<Trip>('/trips', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${publicAnonKey}`,
-    },
     body: JSON.stringify(payload),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to create trip: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
-/**
- * Get a trip by ID
- */
+/** Get a trip by ID. */
 export async function getTrip(tripId: string): Promise<Trip> {
-  const response = await fetch(`${API_BASE_URL}/trips/${tripId}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${publicAnonKey}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to fetch trip: ${response.statusText}`);
-  }
-
-  return response.json();
+  return apiFetch<Trip>(`/trips/${tripId}`);
 }
 
-/**
- * Update an existing trip
- */
+/** Update an existing trip. */
 export async function updateTrip(tripId: string, updates: UpdateTripPayload): Promise<Trip> {
-  const response = await fetch(`${API_BASE_URL}/trips/${tripId}`, {
+  return apiFetch<Trip>(`/trips/${tripId}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${publicAnonKey}`,
-    },
     body: JSON.stringify(updates),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to update trip: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
 /**
- * Generate itineraries for a trip
+ * Generate itineraries for a trip.
+ * Searches real flight and hotel inventory, then has the agent assemble three
+ * comparable options — this can take 20-60s.
  */
 export async function generateItineraries(tripId: string): Promise<{ itineraries: any[] }> {
-  const response = await fetch(`${API_BASE_URL}/trips/${tripId}/generate-itineraries`, {
+  return apiFetch<{ itineraries: any[] }>(`/trips/${tripId}/generate-itineraries`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${publicAnonKey}`,
-    },
-    body: JSON.stringify({ tripId }),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to generate itineraries: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
-/**
- * Confirm booking for a trip
- */
-export async function confirmBooking(tripId: string, selectedItineraryId: string): Promise<{ trip: Trip; confirmations: any }> {
-  const response = await fetch(`${API_BASE_URL}/trips/${tripId}/confirm-booking`, {
+/** Confirm the selected itinerary. Records the choice; takes no payment. */
+export async function confirmBooking(
+  tripId: string,
+  selectedItineraryId: string,
+): Promise<{ trip: Trip; confirmations: any }> {
+  return apiFetch<{ trip: Trip; confirmations: any }>(`/trips/${tripId}/confirm-booking`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${publicAnonKey}`,
-    },
     body: JSON.stringify({ selected_itinerary_id: selectedItineraryId }),
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to confirm booking: ${response.statusText}`);
-  }
-
-  return response.json();
 }
