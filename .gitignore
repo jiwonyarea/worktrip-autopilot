@@ -1,0 +1,19 @@
+# tooling shadows / snapshots
+.archiver_shadow/
+.snapshots/
+
+# dependencies & build output
+node_modules/
+dist/
+
+# secrets — never commit API keys
+.env
+.env.*
+!.env.example
+
+# original Figma Make export (kept locally as backup)
+*.zip
+
+# os / editor
+.DS_Store
+*.log
