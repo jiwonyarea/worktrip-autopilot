@@ -24,6 +24,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    // Pin the port. Vite's default is to silently move to the next free port
+    // when 5173 is taken, which makes the URL unpredictable; failing loudly is
+    // easier to diagnose. Listen on all interfaces so localhost resolves via
+    // both IPv4 and IPv6.
+    port: 5173,
+    strictPort: true,
+    host: true,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src/app'),
