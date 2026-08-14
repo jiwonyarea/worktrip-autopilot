@@ -14,7 +14,7 @@ Originally designed in Figma Make; this repo is the working application.
 | API | Supabase Edge Function (Deno + Hono), one function named `server` |
 | Data | Supabase Postgres — `kv_store` (trips, preferences) + `expenses` |
 | Agent | Anthropic Claude (`claude-opus-5`) with structured outputs |
-| Travel data | Amadeus Self-Service API (flight offers, hotel offers) |
+| Travel data | SerpApi — Google Flights + Google Hotels |
 
 ## Setup
 
@@ -38,7 +38,7 @@ storage bucket.
 | Key | Where to get it | Cost |
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | Pay per token |
-| `AMADEUS_API_KEY` / `AMADEUS_API_SECRET` | [developers.amadeus.com](https://developers.amadeus.com) | Test tier free |
+| `SERPAPI_API_KEY` | [serpapi.com](https://serpapi.com) | 100 searches/mo free |
 
 ### 4. Deploy the API
 
@@ -46,8 +46,7 @@ storage bucket.
 supabase link --project-ref YOUR_PROJECT_REF
 
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-supabase secrets set AMADEUS_API_KEY=...
-supabase secrets set AMADEUS_API_SECRET=...
+supabase secrets set SERPAPI_API_KEY=...
 
 supabase functions deploy server
 ```
@@ -60,7 +59,7 @@ Verify:
 ```bash
 curl "$VITE_SUPABASE_URL/functions/v1/server/health" \
   -H "Authorization: Bearer $VITE_SUPABASE_ANON_KEY"
-# {"status":"ok","integrations":{"anthropic":true,"amadeus":true}}
+# {"status":"ok","integrations":{"anthropic":true,"serpapi":true}}
 ```
 
 Both integrations must report `true`. The API returns a clear 503 rather than
@@ -92,14 +91,14 @@ Base: `{SUPABASE_URL}/functions/v1/server`
         ├─ POST /trips ──────────────► stored in kv_store
         │
         └─ POST /generate-itineraries
-                 ├─ Amadeus: resolve PIT / NYC
-                 ├─ Amadeus: flight offers (economy + business)
-                 ├─ Amadeus: hotel offers
+                 ├─ Claude: resolve city names -> PIT / JFK
+                 ├─ SerpApi: Google Flights (round trip + return legs)
+                 ├─ SerpApi: Google Hotels
                  └─ Claude: assemble balanced / premium / budget
                             against travelers' preferences and the budget policy
 ```
 
-The agent may only use inventory Amadeus returned — it is instructed never to
+The agent may only use inventory SerpApi returned — it is instructed never to
 invent an airline, flight number, hotel, or price, and totals are recomputed
 server-side rather than trusted from the model.
 
@@ -109,9 +108,13 @@ server-side rather than trusted from the model.
   `simulated: true` confirmation codes. No reservation is held and no payment
   is taken. Real ticketing needs an Amadeus production contract and a payment
   processor.
-- **Amadeus test environment** returns real schedules and realistic prices, but
-  is not live inventory. Set `AMADEUS_ENV=production` once you have production
-  credentials.
+- **Search budget.** SerpApi's free plan allows 100 searches/month and one
+  trip costs 3 (round-trip flights, return legs, hotels) — roughly 33 trips.
+  Paid plans start at $25/mo for 1,000 searches.
+- **Amadeus is no longer an option.** Amadeus decommissioned its Self-Service
+  API on 2026-07-17; only Enterprise access remains. That is why this uses
+  SerpApi. The provider lives in one module (`serpapi.ts`), so swapping it
+  again means rewriting that file only.
 - **No authentication.** Every visitor sees the same trips, and the expenses
   RLS policies are open (see the DEMO POSTURE comments in the migration). Add
   auth before this handles anyone's real spend.

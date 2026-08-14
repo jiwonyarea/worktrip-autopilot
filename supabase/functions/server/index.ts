@@ -16,7 +16,7 @@ import {
   extractReceipt,
   parseIntent,
 } from "./claude.ts";
-import { amadeusConfigured } from "./amadeus.ts";
+import { serpapiConfigured } from "./serpapi.ts";
 
 const api = new Hono();
 
@@ -52,7 +52,7 @@ api.get("/health", (c) =>
     // Surfaces which integrations are wired up without leaking key values.
     integrations: {
       anthropic: claudeConfigured(),
-      amadeus: amadeusConfigured(),
+      serpapi: serpapiConfigured(),
     },
   }),
 );

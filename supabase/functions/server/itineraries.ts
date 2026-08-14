@@ -9,14 +9,16 @@
 
 import * as kv from "./kv_store.ts";
 import {
-  amadeusConfigured,
-  resolveCityCode,
   searchFlights,
   searchHotels,
-  type FlightOffer,
+  serpapiConfigured,
   type HotelOffer,
-} from "./amadeus.ts";
-import { claudeConfigured, synthesizeItineraries } from "./claude.ts";
+} from "./serpapi.ts";
+import {
+  claudeConfigured,
+  resolveAirports,
+  synthesizeItineraries,
+} from "./claude.ts";
 
 const DEFAULT_PREFERENCES = {
   airport_flexibility: "home_only",
@@ -48,9 +50,9 @@ export async function generateItineraries(tripId: string) {
       503,
     );
   }
-  if (!amadeusConfigured()) {
+  if (!serpapiConfigured()) {
     throw new GenerationError(
-      "Flight and hotel search is not configured. Set AMADEUS_API_KEY and AMADEUS_API_SECRET.",
+      "Flight and hotel search is not configured. Set SERPAPI_API_KEY.",
       503,
     );
   }
@@ -81,53 +83,45 @@ export async function generateItineraries(tripId: string) {
   }
 
   // --- Resolve cities to IATA codes -----------------------------------------
-  const [originCode, destinationCode] = await Promise.all([
-    resolveCityCode(origin),
-    resolveCityCode(destination),
-  ]);
+  const airports = await resolveAirports(origin, destination);
 
-  if (!originCode || !destinationCode) {
+  if (!airports.origin_confident || !airports.destination_confident) {
+    const unclear = !airports.origin_confident ? origin : destination;
     throw new GenerationError(
-      `Could not find an airport for ${!originCode ? origin : destination}. Try a nearby major city.`,
+      `Could not find an airport serving ${unclear}. Try a nearby major city.`,
       400,
-      { unresolved_city: !originCode ? origin : destination },
+      { unresolved_city: unclear },
     );
   }
+
+  const originCode = airports.origin_iata;
+  const destinationCode = airports.destination_iata;
 
   // --- Pull real inventory ---------------------------------------------------
   const travelerCount = travelers.length;
 
-  const [economy, business, hotels] = await Promise.all([
+  const [flights, hotels] = await Promise.all([
     searchFlights({
-      origin: originCode,
-      destination: destinationCode,
+      originCode,
+      destinationCode,
       departureDate: startDate,
       returnDate: endDate,
       adults: travelerCount,
-      travelClass: "ECONOMY",
-      max: 12,
     }),
-    searchFlights({
-      origin: originCode,
-      destination: destinationCode,
-      departureDate: startDate,
-      returnDate: endDate,
-      adults: travelerCount,
-      travelClass: "BUSINESS",
-      max: 4,
-    }).catch(() => [] as FlightOffer[]), // business inventory is often absent in test
+    // Hotels are a nice-to-have: if the search fails the agent estimates
+    // lodging and says so, rather than failing the whole request.
     searchHotels({
-      cityCode: destinationCode,
+      city: destination,
       checkIn: startDate,
       checkOut: endDate,
       adults: travelerCount,
-      rooms: travelerCount,
-    }).catch(() => [] as HotelOffer[]),
+    }).catch((error) => {
+      console.warn("Hotel search failed:", error);
+      return [] as HotelOffer[];
+    }),
   ]);
 
-  const flights = [...economy, ...business];
-
-  if (flights.length === 0) {
+  if (flights.outboundOptions.length === 0) {
     throw new GenerationError(
       `No flights found from ${originCode} to ${destinationCode} on ${startDate}. ` +
         "Try different dates or a nearby airport.",
@@ -181,14 +175,19 @@ export async function generateItineraries(tripId: string) {
       autonomy_level: trip.autonomy_level ?? "suggest_only",
     },
     travelers: travelersWithPreferences,
-    available_flights: flights,
+    available_outbound_flights: flights.outboundOptions,
+    available_return_flights: flights.returnOptions,
     available_hotels: hotels.slice(0, 15),
     inventory_notes: [
+      "Each outbound option's roundTripPrice is the TOTAL round-trip fare for " +
+        "all travelers combined. Use it as flight_cost directly; do not multiply " +
+        "it by the traveler count.",
+      "Pair each outbound option with one of the return options.",
       hotels.length === 0
-        ? "No hotel inventory was returned for this city; estimate lodging and say so."
-        : null,
-      business.length === 0
-        ? "No business-class inventory was available; build the premium option from the best economy fares."
+        ? "No hotel inventory came back for this city; estimate lodging and say so in the summary."
+        : "Hotel prices are per room; multiply by rooms and nights as appropriate.",
+      flights.returnOptions.length === 0
+        ? "No return legs were returned; describe the return as 'to be confirmed' rather than inventing one."
         : null,
     ].filter(Boolean),
   };
@@ -208,7 +207,7 @@ export async function generateItineraries(tripId: string) {
     budget_percentage: trip.total_budget
       ? Math.round((option.total_cost / trip.total_budget) * 100)
       : 0,
-    data_source: "amadeus",
+    data_source: "serpapi",
   }));
 
   await kv.set(`trip:${tripId}`, {
@@ -220,7 +219,7 @@ export async function generateItineraries(tripId: string) {
 
   console.log(
     `Generated ${itineraries.length} itineraries for ${tripId} ` +
-      `(${originCode}->${destinationCode}, ${flights.length} flights, ${hotels.length} hotels)`,
+      `(${originCode}->${destinationCode}, ${flights.outboundOptions.length} outbound options, ${hotels.length} hotels)`,
   );
 
   return { itineraries };

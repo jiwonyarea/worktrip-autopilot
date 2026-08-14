@@ -121,6 +121,63 @@ export function parseIntent(
 }
 
 // ---------------------------------------------------------------------------
+// Airport resolution
+// ---------------------------------------------------------------------------
+
+const AIRPORTS_SCHEMA = {
+  type: "object",
+  properties: {
+    origin_iata: {
+      type: "string",
+      description: "3-letter IATA code for the origin's main commercial airport",
+    },
+    destination_iata: {
+      type: "string",
+      description: "3-letter IATA code for the destination's main commercial airport",
+    },
+    origin_confident: { type: "boolean" },
+    destination_confident: { type: "boolean" },
+  },
+  required: [
+    "origin_iata",
+    "destination_iata",
+    "origin_confident",
+    "destination_confident",
+  ],
+  additionalProperties: false,
+} as const;
+
+export interface ResolvedAirports {
+  origin_iata: string;
+  destination_iata: string;
+  origin_confident: boolean;
+  destination_confident: boolean;
+}
+
+/**
+ * Map city names to IATA airport codes. Google Flights needs codes, not names.
+ * Where a metro area has several airports, pick the one with the widest
+ * service (NYC -> JFK, London -> LHR) so the search returns useful inventory.
+ */
+export function resolveAirports(
+  originCity: string,
+  destinationCity: string,
+): Promise<ResolvedAirports> {
+  return structured<ResolvedAirports>({
+    effort: "low",
+    maxTokens: 1000,
+    system:
+      "You map city names to IATA airport codes. For metro areas with multiple " +
+      "airports, choose the primary international airport with the broadest " +
+      "commercial service. Set the *_confident flag to false if you are unsure " +
+      "the city exists or has commercial air service — never guess a plausible " +
+      "looking code.",
+    content: `Origin: ${originCity}\nDestination: ${destinationCity}`,
+    schema: AIRPORTS_SCHEMA,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Itinerary synthesis
 // ---------------------------------------------------------------------------
 
