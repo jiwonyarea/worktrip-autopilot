@@ -91,6 +91,10 @@ export interface Trip {
   // Traditional fields
   trip_name: string;
   destination: string;
+  origin_city: string | null;
+  inferred_origin_city: string | null;
+  inferred_travelers_count: number | null;
+  policy_guidelines: string | null;
   start_date: string | null;
   end_date: string | null;
   purpose: string;
@@ -153,4 +157,21 @@ export async function confirmBooking(
     method: 'POST',
     body: JSON.stringify({ selected_itinerary_id: selectedItineraryId }),
   });
+}
+
+export interface Expense {
+  id: string;
+  trip_id: string;
+  merchant: string;
+  amount: number;
+  date: string;
+  category: string;
+  traveler: string;
+  receipt_url: string | null;
+  policy_status: string;
+}
+
+/** List expenses filed against a trip, newest first. */
+export async function getExpenses(tripId: string): Promise<Expense[]> {
+  return apiFetch<Expense[]>(`/trips/${tripId}/expenses`);
 }

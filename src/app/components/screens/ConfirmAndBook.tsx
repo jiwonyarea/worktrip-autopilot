@@ -6,6 +6,8 @@ import svgPaths from "../../imports/svg-m2suhopkjk";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
 
 interface ConfirmAndBookProps {
+  /** Option chosen on Review & Approve. */
+  selectedItineraryId?: string | null;
   onBack?: () => void;
   onConfirm?: () => void;
   tripId?: string | null;

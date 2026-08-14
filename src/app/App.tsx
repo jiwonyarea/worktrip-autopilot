@@ -22,12 +22,16 @@ type Screen =
   | "edit-itinerary-detail"
   | "confirm-and-book"
   | "trip-overview"
-  | "expenses";
+  | "expenses"
+  | "traveler-survey";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("intent-capture");
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [currentTrip, setCurrentTrip] = useState<Trip | null>(null);
+  // Which of the three options the organizer picked. Drives every screen
+  // after Review & Approve.
+  const [selectedItineraryId, setSelectedItineraryId] = useState<string | null>(null);
 
   // Check URL parameters on mount for traveler survey access
   useEffect(() => {
@@ -64,11 +68,13 @@ export default function App() {
     setCurrentScreen("confirm-and-book");
   };
 
-  const handleSelectOption = () => {
+  const handleSelectOption = (itineraryId?: string) => {
+    if (itineraryId) setSelectedItineraryId(itineraryId);
     setCurrentScreen("edit-itinerary-detail");
   };
 
   const handleStartOverFromHome = () => {
+    setSelectedItineraryId(null);
     setCurrentScreen("intent-capture");
   };
 
@@ -87,6 +93,7 @@ export default function App() {
   const handleBackToHome = () => {
     setCurrentTripId(null);
     setCurrentTrip(null);
+    setSelectedItineraryId(null);
     setCurrentScreen("intent-capture");
   };
 
@@ -130,6 +137,7 @@ export default function App() {
         return (
           <EditItinerary
             tripId={currentTripId}
+            selectedItineraryId={selectedItineraryId}
             onComplete={handleEditItineraryComplete}
             onBack={handleEditItineraryBack}
             onBackToHome={handleBackToHome}
@@ -140,6 +148,7 @@ export default function App() {
         return (
           <EditItineraryinDetail
             tripId={currentTripId}
+            selectedItineraryId={selectedItineraryId}
             onComplete={handleConfirmAndBookComplete}
             onBack={() => setCurrentScreen("review-approve")}
             onBackToHome={handleBackToHome}
@@ -150,6 +159,7 @@ export default function App() {
         return (
           <ConfirmAndBook
             tripId={currentTripId}
+            selectedItineraryId={selectedItineraryId}
             onComplete={handleConfirmAndBookComplete}
             onBack={handleConfirmAndBookBack}
           />
@@ -159,6 +169,7 @@ export default function App() {
         return (
           <TripOverview
             tripId={currentTripId}
+            selectedItineraryId={selectedItineraryId}
             onViewExpenses={() => setCurrentScreen("expenses")}
             onNewTrip={handleStartOverFromHome}
             onBack={() => setCurrentScreen("confirm-and-book")}

@@ -17,7 +17,7 @@ import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
 
 interface ReviewAndApproveProps {
   onApprove: () => void;
-  onEditItinerary?: () => void;
+  onEditItinerary?: (itineraryId: string) => void;
   onBack?: () => void;
   tripId?: string | null;
 }
@@ -58,16 +58,17 @@ const getAirlineLogo = (flightDetails: string | undefined) => {
 export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, tripId }: ReviewAndApproveProps) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItineraryId, setSelectedItineraryId] = useState<string | null>(null);
   const [hotelImages, setHotelImages] = useState<string[]>([]);
 
   // Function to switch itinerary option and navigate
   const handleSwitchOption = (optionId: string) => {
     setSelectedItineraryId(optionId);
-    
-    // Navigate immediately to next page
+
+    // Hand the choice to the next screen — it renders this exact option.
     if (onEditItinerary) {
-      onEditItinerary();
+      onEditItinerary(optionId);
     }
   };
 
@@ -98,100 +99,17 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, tripId }:
           }
         })
         .catch((error) => {
-          // toast.info("Demo Mode", {
-          //   description: "Showing mock itineraries for demonstration"
-          // });
-          
-          const mockTrip: Trip = {
-            id: tripId,
-            organizer_id: null,
-            organizer_name: "Sarah Chen",
-            organizer_email: "sarah.chen@company.com",
-            intent_text: "Book me a trip from Pittsburgh to New York City from March 2 to March 5 of 2026 for 1 passenger. The purpose of this trip is AWS re:Invent 2026 conference.",
-            inferred_trip_name: "AWS: re:Invent 2026",
-            inferred_destination: "New York City",
-            inferred_dates: {
-              start_date: "2026-03-02",
-              end_date: "2026-03-05"
-            },
-            trip_name: "AWS: re:Invent 2026",
-            destination: "New York City",
-            start_date: "2026-03-02",
-            end_date: "2026-03-05",
-            purpose: "Conference",
-            budget_per_person: 2500,
-            total_budget: 2500,
-            autonomy_level: "medium",
-            travelers: [{ name: "Sarah Chen", email: "sarah.chen@company.com" }],
-            survey_config: null,
-            status: "awaiting_selection",
-            selected_itinerary_id: null,
-            confirmations: null,
-            booked_at: null,
-            itineraries: [
-              {
-                id: "balanced-option",
-                trip_id: tripId,
-                option_label: "balanced",
-                title: "Balanced",
-                total_cost: 1477,
-                details: {
-                  flight_cost: 831,
-                  hotel_cost: 646,
-                  ground_transport_cost: 240,
-                  food_cost: 400,
-                  outbound_flight: "Delta Airlines · DL 1420 · PIT to LGA · 9:00 - 11:05",
-                  return_flight: "Delta Airlines · DL 1523 · LGA to PIT · 18:45 - 20:30",
-                  hotel_name: "New York Marriott Downtown",
-                  hotel_rating: 4.2,
-                  hotel_distance: "0.8 mi to venue"
-                }
-              },
-              {
-                id: "premium-option",
-                trip_id: tripId,
-                option_label: "premium",
-                title: "Time saver",
-                total_cost: 1872,
-                details: {
-                  flight_cost: 1053,
-                  hotel_cost: 819,
-                  ground_transport_cost: 240,
-                  food_cost: 400,
-                  outbound_flight: "United Airlines · UA 501 · PIT to JFK · 7:15 - 9:10",
-                  return_flight: "United Airlines · UA 610 · JFK to PIT · 20:30 - 22:15",
-                  hotel_name: "Conrad New York Downtown",
-                  hotel_rating: 4.5,
-                  hotel_distance: "0.3 mi to venue"
-                }
-              },
-              {
-                id: "budget-option",
-                trip_id: tripId,
-                option_label: "budget",
-                title: "Cost saver",
-                total_cost: 1218,
-                details: {
-                  flight_cost: 685,
-                  hotel_cost: 533,
-                  ground_transport_cost: 240,
-                  food_cost: 400,
-                  outbound_flight: "Spirit Airlines · NK 302 · PIT to EWR · 11:30 - 13:45",
-                  return_flight: "Spirit Airlines · NK 415 · EWR to PIT · 16:00 - 17:50",
-                  hotel_name: "Hampton Inn Manhattan",
-                  hotel_rating: 4.0,
-                  hotel_distance: "1.2 mi to venue"
-                }
-              }
-            ]
-          };
-          
-          setTrip(mockTrip);
-          setSelectedItineraryId("balanced-option");
+          // Surface the real failure. Substituting a demo trip here is what
+          // made backend problems look like the app "working with mock data".
+          console.error("Could not load trip:", error);
+          setLoadError(
+            error instanceof Error ? error.message : "Could not load this trip",
+          );
         })
-        .finally(() => {
-          setLoading(false);
-        });
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+      setLoadError("No trip selected");
     }
   }, [tripId]);
 
@@ -201,9 +119,9 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, tripId }:
       return;
     }
 
-    // Navigate to Edit Itinerary page instead of booking directly
+    // Review happens on the detail screen; booking is confirmed there.
     if (onEditItinerary) {
-      onEditItinerary();
+      onEditItinerary(selectedItineraryId);
     }
   };
 
@@ -220,11 +138,17 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, tripId }:
     );
   }
 
-  if (!trip) {
+  if (loadError || !trip) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-700">No trip data available</p>
+        <div className="text-center max-w-md px-6">
+          <p className="text-gray-700 mb-4">{loadError || "No trip data available"}</p>
+          <Button
+            onClick={onBack}
+            className="bg-[#916AF5] hover:bg-[#7c5dd4] text-white"
+          >
+            Start over
+          </Button>
         </div>
       </div>
     );

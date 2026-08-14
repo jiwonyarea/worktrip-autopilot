@@ -19,6 +19,8 @@ import imgBackground from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.
 import { ExpensesTable } from "./EditItineraryExpensesTable";
 
 interface EditItineraryProps {
+  /** Option chosen on Review & Approve. */
+  selectedItineraryId?: string | null;
   onBack?: () => void;
   onContinue?: () => void;
   tripId?: string | null;

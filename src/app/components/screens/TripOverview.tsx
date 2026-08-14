@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ChevronLeft, 
   Share2, 
@@ -20,17 +20,113 @@ import {
 import { Button } from "../ui/button";
 import svgPaths from "../../imports/svg-kxhvyi8xmt";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
+import { Loader2 } from "lucide-react";
+import { Trip, Expense, getTrip, getExpenses } from "../../utils/tripApi";
+import {
+  parseFlight,
+  formatDayHeading,
+  formatMoney,
+  formatDate,
+  pickItinerary,
+  travelerCount,
+} from "../../utils/itinerary";
 
 interface TripOverviewProps {
   onViewExpenses?: () => void;
   onNewTrip?: () => void;
   onBack?: () => void;
   tripId?: string | null;
+  selectedItineraryId?: string | null;
 }
 
-export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: TripOverviewProps) {
+export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, selectedItineraryId }: TripOverviewProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "expenses">("overview");
   const [showSuccessBanner, setShowSuccessBanner] = useState(true);
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tripId) {
+      setLoading(false);
+      setError("No trip selected");
+      return;
+    }
+
+    let cancelled = false;
+    // Expenses are optional — a trip with none still renders the overview.
+    Promise.all([getTrip(tripId), getExpenses(tripId).catch(() => [] as Expense[])])
+      .then(([tripData, expenseData]) => {
+        if (cancelled) return;
+        setTrip(tripData);
+        setExpenses(expenseData);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Could not load this trip");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tripId]);
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen relative bg-cover bg-center bg-no-repeat flex items-center justify-center"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      >
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl px-8 py-6 flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-[#916af5]" />
+          <p className="text-gray-700">Loading your trip...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !trip) {
+    return (
+      <div
+        className="min-h-screen relative bg-cover bg-center bg-no-repeat flex items-center justify-center"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      >
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl px-8 py-6 text-center max-w-md">
+          <p className="text-gray-700 mb-4">{error || "Trip not found"}</p>
+          <button
+            onClick={onNewTrip}
+            className="bg-[#916af5] hover:bg-[#7c5dd4] text-white rounded-xl px-6 py-2.5 text-sm font-medium transition-colors"
+          >
+            Plan a new trip
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const itinerary = pickItinerary(trip, selectedItineraryId);
+  const details = itinerary?.details ?? {};
+  const travelers = travelerCount(trip);
+  const outbound = parseFlight(details.outbound_flight);
+  const inbound = parseFlight(details.return_flight);
+  const isBooked = trip.status === "booked";
+  const inPolicy = itinerary?.policy_compliant !== false;
+
+  // Days until departure, for the "Next event" card.
+  const daysToDeparture = trip.start_date
+    ? Math.ceil(
+        (new Date(`${trip.start_date}T00:00:00`).getTime() - Date.now()) / 86_400_000,
+      )
+    : null;
+
+  const expenseTotal = expenses.reduce((sum, e) => sum + Number(e.amount ?? 0), 0);
+  const expenseBy = (category: string) =>
+    expenses
+      .filter((e) => (e.category ?? "").toLowerCase() === category)
+      .reduce((sum, e) => sum + Number(e.amount ?? 0), 0);
 
   return (
     <div 
@@ -73,12 +169,12 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <h1 className="text-lg font-semibold text-[#1f2933]">
-                  AWS: re:Invent 2026
+                  {trip.trip_name}
                 </h1>
-                
-                <div className="bg-[#dafbe8] rounded-full px-3 py-1 flex items-center justify-center">
-                  <span className="font-['Inter:Medium',sans-serif] font-medium text-[12px] leading-[16px] text-[#4dc13a]">
-                    ✓ Booked
+
+                <div className={`${isBooked ? "bg-[#dafbe8]" : "bg-[#D4E9FF]"} rounded-full px-3 py-1 flex items-center justify-center`}>
+                  <span className={`font-['Inter:Medium',sans-serif] font-medium text-[12px] leading-[16px] ${isBooked ? "text-[#4dc13a]" : "text-[#1246A5]"}`}>
+                    {isBooked ? "✓ Booked" : trip.status}
                   </span>
                 </div>
                 
@@ -87,19 +183,19 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#4a5565]">
                 <div className="flex items-center gap-1.5">
                   <MapPin className="w-4 h-4" />
-                  <span>New York City</span>
+                  <span>{trip.destination}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
-                  <span>2026-03-02 - 2026-03-05</span>
+                  <span>{trip.start_date} - {trip.end_date}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Users className="w-4 h-4" />
-                  <span>1 traveler</span>
+                  <span>{travelers} traveler{travelers === 1 ? "" : "s"}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Briefcase className="w-4 h-4" />
-                  <span>Conference</span>
+                  <span>{trip.purpose}</span>
                 </div>
               </div>
             </div>
@@ -156,7 +252,9 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                         </h3>
                       </div>
                       <p className="text-xs text-[#4a5565] leading-relaxed">
-                        Flights, hotels, and ground transportation are secured
+                        {trip.confirmations
+                          ? `Flight ${trip.confirmations.flight} · Hotel ${trip.confirmations.hotel}`
+                          : "Flights, hotels, and ground transportation are secured"}
                       </p>
                     </div>
 
@@ -166,7 +264,15 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                         <Calendar className="w-5 h-5 text-[#1246a5]" />
                         <h3 className="font-normal text-sm text-[#1f2933]">Next event</h3>
                       </div>
-                      <p className="text-xs text-[#4a5565]">Departure flight in 7 days</p>
+                      <p className="text-xs text-[#4a5565]">
+                        {daysToDeparture === null
+                          ? "Dates not set"
+                          : daysToDeparture > 0
+                            ? `Departure flight in ${daysToDeparture} day${daysToDeparture === 1 ? "" : "s"}`
+                            : daysToDeparture === 0
+                              ? "Departure flight today"
+                              : "Trip underway"}
+                      </p>
                     </div>
                   </div>
 
@@ -197,7 +303,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                     <div className="space-y-4">
                       {/* Tuesday, Mar 3 */}
                       <div>
-                        <h3 className="text-base font-semibold text-[#1f2933] mb-4">Tuesday, Mar 2</h3>
+                        <h3 className="text-base font-semibold text-[#1f2933] mb-4">{formatDayHeading(trip.start_date)}</h3>
                         <div className="flex gap-4">
                           {/* Timeline vertical line */}
                           <div className="flex flex-col items-center w-14 flex-shrink-0">
@@ -213,10 +319,12 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-semibold text-sm text-[#1f2933] mb-0.5">
-                                  9:00-11:05
+                                  {outbound ? `${outbound.departTime}-${outbound.arriveTime}` : "Flight"}
                                 </div>
                                 <div className="text-xs text-[#6a7282] truncate">
-                                  PIT-LGA · Delta Airlines · DE 1234
+                                  {outbound
+                                    ? `${outbound.from}-${outbound.to} · ${outbound.airline} · ${outbound.flightNumber}`
+                                    : details.outbound_flight || "Details pending"}
                                 </div>
                               </div>
                               <ChevronRight className="w-4 h-4 text-[#1f2933] flex-shrink-0" />
@@ -229,7 +337,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-semibold text-sm text-[#1f2933] mb-0.5">
-                                  Hampton Inn Manhattan Times
+                                  {details.hotel_name || "Hotel"}
                                 </div>
                                 <div className="text-xs text-[#6a7282]">Check-in 4:00 PM</div>
                               </div>
@@ -245,7 +353,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                           {/* Timeline badge */}
                           <div className="flex flex-col items-center w-14 flex-shrink-0 gap-2">
                             <div className="bg-[#18a0a6] text-white text-xs font-semibold px-2.5 py-1.5 rounded-full">
-                              3-5
+                              {trip.start_date?.slice(8)}-{trip.end_date?.slice(8)}
                             </div>
                             <div className="w-0.5 flex-1 bg-[#e5e7eb]"></div>
                           </div>
@@ -253,15 +361,15 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                           {/* Event */}
                           <div className="flex-1">
                             <div className="mb-3">
-                              <span className="text-sm font-normal text-[#1f2933]">Conference days</span>
+                              <span className="text-sm font-normal text-[#1f2933] capitalize">{trip.purpose} days</span>
                             </div>
                             <div className="bg-[rgba(31,157,85,0.1)] border border-[rgba(31,157,85,0.2)] rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(31,157,85,0.15)] transition-colors">
                               <div className="flex-shrink-0">
                                 <MapPin className="w-4 h-4 text-[#18a0a6]" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold text-[#1f2933] mb-0.5">AWS re:Invent</div>
-                                <div className="text-xs text-[#6a7282]">Venetian Expo</div>
+                                <div className="text-sm font-semibold text-[#1f2933]">{trip.trip_name}</div>
+                                <div className="text-xs text-[#6a7282]">{trip.destination}</div>
                               </div>
                               <ChevronRight className="w-4 h-4 text-[#1f2933] flex-shrink-0" />
                             </div>
@@ -271,7 +379,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
 
                       {/* Thursday, Mar 5 */}
                       <div>
-                        <h3 className="text-base font-semibold text-[#1f2933] mb-4">Friday, Mar 5</h3>
+                        <h3 className="text-base font-semibold text-[#1f2933] mb-4">{formatDayHeading(trip.end_date)}</h3>
                         <div className="flex gap-4">
                           {/* Timeline vertical line */}
                           <div className="flex flex-col items-center w-14 flex-shrink-0">
@@ -287,7 +395,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-semibold text-sm text-[#1f2933] mb-0.5">
-                                  Hampton Inn Manhattan Times
+                                  {details.hotel_name || "Hotel"}
                                 </div>
                                 <div className="text-xs text-[#6a7282]">Check out 11:00 AM</div>
                               </div>
@@ -301,10 +409,12 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-semibold text-sm text-[#1f2933] mb-0.5">
-                                  18:45 -20:30
+                                  {inbound ? `${inbound.departTime}-${inbound.arriveTime}` : "Return flight"}
                                 </div>
                                 <div className="text-xs text-[#6a7282] truncate">
-                                  LGA-PIT · United Airlines · DE 1234
+                                  {inbound
+                                    ? `${inbound.from}-${inbound.to} · ${inbound.airline} · ${inbound.flightNumber}`
+                                    : details.return_flight || "Details pending"}
                                 </div>
                               </div>
                               <ChevronRight className="w-4 h-4 text-[#1f2933] flex-shrink-0" />
@@ -324,42 +434,60 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                       <h3 className="text-base font-semibold text-[#1f2933] mb-4">Trip total & Compliance</h3>
                       
                       <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-3xl font-normal text-[#0a0a0a]">$1,477</span>
-                        
+                        <span className="text-3xl font-normal text-[#0a0a0a]">
+                          {formatMoney(itinerary?.total_cost)}
+                        </span>
+                        {trip.total_budget ? (
+                          <span className="text-sm text-[#6a7282]">of {formatMoney(trip.total_budget)}</span>
+                        ) : null}
                       </div>
-                      
+
                       {/* Progress bar */}
                       <div className="w-full h-2.5 bg-[rgba(3,2,19,0.2)] rounded-full mb-2 overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-[#52c93f] to-[#18a0a6]"
-                          style={{ width: "100%" }}
+                          className={`h-full ${inPolicy ? "bg-gradient-to-r from-[#52c93f] to-[#18a0a6]" : "bg-gradient-to-r from-[#f5a623] to-[#e5484d]"}`}
+                          style={{
+                            width: `${Math.min(
+                              trip.total_budget && itinerary
+                                ? (itinerary.total_cost / trip.total_budget) * 100
+                                : 100,
+                              100,
+                            )}%`,
+                          }}
                         />
                       </div>
 
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-xs text-[#1F9D55]">Your trip is fully compliant with policy</span>
-                        <div className="bg-[#d1f4e0] text-[#52c93f] rounded-full px-3 py-1 text-xs font-medium">
-                          In policy
+                      <div className="flex items-center justify-between gap-3 mb-4">
+                        <span className={`text-xs ${inPolicy ? "text-[#1F9D55]" : "text-[#b45309]"}`}>
+                          {itinerary?.policy_note ||
+                            (inPolicy ? "Your trip is fully compliant with policy" : "Review this trip against policy")}
+                        </span>
+                        <div className={`${inPolicy ? "bg-[#d1f4e0] text-[#52c93f]" : "bg-[#ffe9cc] text-[#b45309]"} rounded-full px-3 py-1 text-xs font-medium flex-shrink-0`}>
+                          {inPolicy ? "In policy" : "Review"}
                         </div>
                       </div>
 
-                      {/* Breakdown */}
+                      {/* Breakdown: planned cost, with filed expenses alongside */}
                       <div className="space-y-3.5">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-[#4a5565]">Flights</span>
-                          <span className="font-normal text-[#1f2933]">$831</span>
+                          <span className="font-normal text-[#1f2933]">{formatMoney(details.flight_cost)}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-[#4a5565]">Hotels</span>
-                          <span className="font-normal text-[#1f2933]">$646</span>
+                          <span className="font-normal text-[#1f2933]">{formatMoney(details.hotel_cost)}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-[#4a5565]">Ground transportation</span>
-                          <span className="font-normal text-[#1f2933]">$0 / $240</span>
+                          <span className="font-normal text-[#1f2933]">
+                            {formatMoney(expenseBy("ground transport"))} / {formatMoney(details.ground_transport_cost)}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-[#4a5565]">Food</span>
-                          <span className="font-normal text-[#1f2933]">$0 / $400</span>
+                          <span className="font-normal text-[#1f2933]">
+                            {formatMoney(expenseBy("food"))} / {formatMoney(details.food_cost)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -426,7 +554,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                   <div className="bg-white/40 backdrop-blur-sm border border-[#e5e7eb] rounded-xl p-5">
                     {/* Header with title and buttons */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
-                      <h3 className="text-base font-semibold text-[#1f2933]">Expenses (2)</h3>
+                      <h3 className="text-base font-semibold text-[#1f2933]">Expenses ({expenses.length})</h3>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Button
                           variant="outline"
@@ -467,42 +595,47 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                             </tr>
                           </thead>
                           <tbody>
-                            <tr className="border-b border-[#e5e7eb] hover:bg-gray-50/50">
-                              <td className="py-3 px-4">
-                                <input type="checkbox" className="w-4 h-4 rounded border-gray-300" />
-                              </td>
-                              <td className="py-3 px-4 text-sm text-[#1f2933]">Feb 15, 2026</td>
-                              <td className="py-3 px-4 text-sm text-[#1f2933]">Delta Airlines</td>
-                              <td className="py-3 px-4">
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-[rgba(18,70,165,0.1)] border border-[rgba(18,70,165,0.2)] text-xs text-[#1f2933]">
-                                  Flight
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-sm font-normal text-[#1f2933]">$831.00</td>
-                              <td className="py-3 px-4">
-                                <button className="text-[#4a5565] hover:text-[#1f2933]">
-                                  <FileText className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-[#e5e7eb] hover:bg-gray-50/50">
-                              <td className="py-3 px-4">
-                                <input type="checkbox" className="w-4 h-4 rounded border-gray-300" />
-                              </td>
-                              <td className="py-3 px-4 text-sm text-[#1f2933]">Feb 15, 2026</td>
-                              <td className="py-3 px-4 text-sm text-[#1f2933]">Hilton Midtown</td>
-                              <td className="py-3 px-4">
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-[rgba(31,157,85,0.1)] border border-[rgba(31,157,85,0.2)] text-xs text-[#1f2933]">
-                                  Hotel
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-sm font-normal text-[#1f2933]">$646.00</td>
-                              <td className="py-3 px-4">
-                                <button className="text-[#4a5565] hover:text-[#1f2933]">
-                                  <FileText className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
+                            {expenses.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="py-10 px-4 text-center text-sm text-[#6a7282]">
+                                  No expenses filed yet. Upload a receipt and the agent will read it.
+                                </td>
+                              </tr>
+                            ) : (
+                              expenses.map((expense) => (
+                                <tr key={expense.id} className="border-b border-[#e5e7eb] hover:bg-gray-50/50">
+                                  <td className="py-3 px-4">
+                                    <input type="checkbox" className="w-4 h-4 rounded border-gray-300" />
+                                  </td>
+                                  <td className="py-3 px-4 text-sm text-[#1f2933]">{formatDate(expense.date)}</td>
+                                  <td className="py-3 px-4 text-sm text-[#1f2933]">{expense.merchant}</td>
+                                  <td className="py-3 px-4">
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-[rgba(18,70,165,0.1)] border border-[rgba(18,70,165,0.2)] text-xs text-[#1f2933]">
+                                      {expense.category}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4 text-sm font-normal text-[#1f2933]">
+                                    ${Number(expense.amount ?? 0).toFixed(2)}
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    {expense.receipt_url ? (
+                                      <a
+                                        href={expense.receipt_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[#4a5565] hover:text-[#1f2933] inline-block"
+                                      >
+                                        <FileText className="w-4 h-4" />
+                                      </a>
+                                    ) : (
+                                      <span className="text-[#c4c7ce]">
+                                        <FileText className="w-4 h-4" />
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
                           </tbody>
                         </table>
                       </div>
@@ -519,26 +652,26 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId }: Trip
                       
                       <div className="flex items-baseline justify-between mb-4">
                         <span className="text-sm text-[#4a5565]">Total expenses</span>
-                        <span className="text-2xl font-normal text-[#0a0a0a]">$1,477</span>
+                        <span className="text-2xl font-normal text-[#0a0a0a]">{formatMoney(expenseTotal)}</span>
                       </div>
 
                       {/* Breakdown */}
                       <div className="space-y-3.5 mb-4">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-[#4a5565]">Flights</span>
-                          <span className="font-normal text-[#1f2933]">$831.00</span>
+                          <span className="font-normal text-[#1f2933]">{formatMoney(expenseBy("flights"))}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-[#4a5565]">Hotels</span>
-                          <span className="font-normal text-[#1f2933]">$646.00</span>
+                          <span className="font-normal text-[#1f2933]">{formatMoney(expenseBy("hotel"))}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-[#4a5565]">Ground transportation</span>
-                          <span className="font-normal text-[#1f2933]">$0</span>
+                          <span className="font-normal text-[#1f2933]">{formatMoney(expenseBy("ground transport"))}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-[#4a5565]">Food </span>
-                          <span className="font-normal text-[#1f2933]">$0</span>
+                          <span className="font-normal text-[#1f2933]">{formatMoney(expenseBy("food"))}</span>
                         </div>
                       </div>
 
