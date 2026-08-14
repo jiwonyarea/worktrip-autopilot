@@ -62,18 +62,12 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
         onComplete();
       }, 500);
     } catch (err) {
-      // DEMO MODE FALLBACK: If API fails, show notification and proceed anyway
-      // Silently handle - no scary console errors
-      // toast.info("Demo Mode", {
-      //   description: "Using mock itineraries for demonstration"
-      // });
-      
-      // Wait a moment to show the planning animation, then proceed
-      setTimeout(() => {
-        onComplete();
-      }, 2000);
-      
-      // Don't set error state - we're handling it gracefully
+      // Show what actually went wrong. Advancing to the next screen on failure
+      // just turns a specific, fixable error into "No itineraries available".
+      console.error("Itinerary generation failed:", err);
+      setError(
+        err instanceof Error ? err.message : "Could not build itineraries for this trip",
+      );
       setIsGenerating(false);
     }
   };

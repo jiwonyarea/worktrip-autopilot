@@ -82,6 +82,24 @@ export async function generateItineraries(tripId: string) {
     );
   }
 
+  // Flight search can only look forward. Catch this here so a past date reads
+  // as "those dates have passed" rather than "no flights on this route".
+  const today = new Date().toISOString().slice(0, 10);
+  if (startDate < today) {
+    throw new GenerationError(
+      `Those dates have already passed (${startDate}). Pick dates in the future.`,
+      400,
+      { start_date: startDate, today },
+    );
+  }
+  if (endDate < startDate) {
+    throw new GenerationError(
+      `The return date (${endDate}) is before the departure date (${startDate}).`,
+      400,
+      { start_date: startDate, end_date: endDate },
+    );
+  }
+
   // --- Resolve cities to IATA codes -----------------------------------------
   const airports = await resolveAirports(origin, destination);
 

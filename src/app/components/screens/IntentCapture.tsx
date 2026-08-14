@@ -35,19 +35,36 @@ function formatDateString(dateStr: string, format: 'short' | 'long' = 'short'): 
   return `${monthNames[month - 1]} ${day}, ${year}`;
 }
 
-// Smart suggestion cards for quick examples
+// Suggestion cards. Dates are generated relative to today rather than written
+// in, so the examples never drift into the past — a past date makes flight
+// search return nothing and the trip fail to generate.
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function exampleDates(startOffsetDays: number, tripLengthDays: number) {
+  const start = new Date();
+  start.setDate(start.getDate() + startOffsetDays);
+  const end = new Date(start);
+  end.setDate(end.getDate() + tripLengthDays);
+
+  const phrase = (d: Date) => `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
+  return `from ${phrase(start)} to ${phrase(end)} of ${end.getFullYear()}`;
+}
+
 const INTENT_SUGGESTIONS = [
   {
     label: "Conference trip",
-    text: "Book me a trip from San Francisco to Seattle from December 5 to December 8 of 2025 for 3 passengers. The purpose of this trip is a conference.",
+    text: `Book me a trip from San Francisco to Seattle ${exampleDates(30, 3)} for 3 passengers. The purpose of this trip is a conference.`,
   },
   {
     label: "Client visit",
-    text: "Book me a trip from Boston to New York City from January 15 to January 18 of 2026 for 2 passengers. The purpose of this trip is a client meeting.",
+    text: `Book me a trip from Boston to New York City ${exampleDates(21, 2)} for 2 passengers. The purpose of this trip is a client meeting.`,
   },
   {
     label: "Team offsite",
-    text: "Book me a trip from Los Angeles to Austin from March 10 to March 14 of 2026 for 10 passengers. The purpose of this trip is an offsite.",
+    text: `Book me a trip from Los Angeles to Austin ${exampleDates(45, 4)} for 10 passengers. The purpose of this trip is an offsite.`,
   },
 ];
 
@@ -200,7 +217,7 @@ export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
               ref={inputRef}
               value={intent}
               onChange={(e) => setIntent(e.target.value)}
-              placeholder="Try: Book me a trip from Pittsburgh to New York City from December 22 to December 30 of ..."
+              placeholder={`Try: Book me a trip from Pittsburgh to New York City ${exampleDates(30, 3)} for 2 passengers`}
               className="flex-1 bg-transparent border-none outline-none text-[#717182] text-[14px] tracking-[-0.15px] placeholder:text-[#717182]"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
