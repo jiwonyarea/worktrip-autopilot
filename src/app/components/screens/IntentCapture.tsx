@@ -348,17 +348,6 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
           </div>
         </div>
 
-        {/* Detection runs before anyone types, so surface it as a hint rather
-            than leaving people to guess whether they must state an origin. */}
-        {detectedOrigin?.city && !intent.trim() && (
-          <div className="max-w-[710px] mx-auto -mt-2 mb-6 flex items-center justify-center gap-1.5 text-xs text-[#4a5565]">
-            <MapPin className="w-3.5 h-3.5" />
-            <span>
-              Departing from <span className="text-[#1f2933] font-medium">{detectedOrigin.city}</span> — just say where you're going
-            </span>
-          </div>
-        )}
-
         {/* Reading state — the parse round-trips to the agent, so say so. */}
         {isParsing && !parsedFields && (
           <div className="max-w-[710px] mx-auto mb-6">
