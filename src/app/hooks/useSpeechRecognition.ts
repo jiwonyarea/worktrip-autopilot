@@ -61,18 +61,42 @@ const ERROR_MESSAGES: Record<string, string> = {
   "not-allowed": "Microphone access was blocked. Allow it in your browser settings to dictate.",
   "service-not-allowed": "Microphone access was blocked. Allow it in your browser settings to dictate.",
   "audio-capture": "No microphone found. Check that one is connected.",
-  network: "Speech recognition needs a network connection.",
+  // Chrome transcribes on Google's servers, so this fires when that service
+  // is unreachable *or* when the build has no access to it — which is the
+  // usual story inside embedded webviews (VS Code's Simple Browser, Electron
+  // shells) and some de-Googled Chromium forks. Offline is the rarer cause.
+  network:
+    "Voice input could not reach the speech service. If you are viewing this " +
+    "inside an editor preview or embedded browser, open it in Chrome, Edge, " +
+    "or Safari instead.",
 };
 
 export interface UseSpeechRecognition {
   /** False on browsers without the API (notably Firefox) — hide the mic. */
   supported: boolean;
+  /** Running in a frame/webview, where the speech backend usually fails. */
+  embedded: boolean;
   listening: boolean;
   /** Words recognised so far in the current phrase, not yet finalised. */
   interim: string;
   error: string | null;
   start: () => void;
   stop: () => void;
+}
+
+/**
+ * Embedded webviews expose the API but usually cannot reach the speech
+ * backend, so dictation fails only once the person tries it. Detecting the
+ * frame lets the UI warn up front instead.
+ */
+function isEmbedded(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.self !== window.top;
+  } catch {
+    // Cross-origin frame access throws, which itself means we are embedded.
+    return true;
+  }
 }
 
 export function useSpeechRecognition(options: {
@@ -83,6 +107,7 @@ export function useSpeechRecognition(options: {
   const { onResult, lang } = options;
 
   const [supported] = useState(() => getRecognitionCtor() !== null);
+  const [embedded] = useState(isEmbedded);
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -187,5 +212,5 @@ export function useSpeechRecognition(options: {
     recognition?.stop();
   }, []);
 
-  return { supported, listening, interim, error, start, stop };
+  return { supported, embedded, listening, interim, error, start, stop };
 }

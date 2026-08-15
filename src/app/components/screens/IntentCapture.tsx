@@ -290,7 +290,13 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                 onClick={() => (speech.listening ? speech.stop() : speech.start())}
                 aria-label={speech.listening ? "Stop dictating" : "Dictate your trip"}
                 aria-pressed={speech.listening}
-                title={speech.listening ? "Stop dictating" : "Dictate your trip"}
+                title={
+                  speech.listening
+                    ? "Stop dictating"
+                    : speech.embedded
+                      ? "Voice input usually needs a real browser window — open this in Chrome, Edge, or Safari"
+                      : "Dictate your trip"
+                }
                 className={`flex-shrink-0 relative w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
                   speech.listening
                     ? "bg-[#916AF5] text-white"
