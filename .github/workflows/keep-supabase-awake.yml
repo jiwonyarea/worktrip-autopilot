@@ -1,0 +1,39 @@
+# Supabase pauses free-tier projects after ~7 days without activity, which would
+# leave the portfolio demo dead for anyone opening it during a quiet stretch.
+# This pings the API every 3 days to keep the project active.
+#
+# /health reads the demo quota counter out of Postgres, so this is a real
+# database query, not just an edge-function no-op — which is what the pause
+# timer actually watches.
+#
+# Setup — add two repository secrets (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL       https://<project-ref>.supabase.co
+#   SUPABASE_ANON_KEY  your publishable/anon key (public by design, but keeping
+#                      it in a secret stays out of build logs)
+
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "0 9 */3 * *" # 09:00 UTC, every 3 days
+  workflow_dispatch: # manual run from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the health endpoint
+        run: |
+          code=$(curl -sS -o /tmp/health.json -w '%{http_code}' \
+            --max-time 30 --retry 3 --retry-delay 10 \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/server/health")
+
+          echo "HTTP $code"
+          cat /tmp/health.json
+          echo
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Health check failed with HTTP $code — the project may be paused."
+            exit 1
+          fi

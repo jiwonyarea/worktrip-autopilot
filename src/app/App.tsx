@@ -45,8 +45,24 @@ export default function App() {
       setCurrentTripId(tripId);
       // Store traveler email for survey access
       sessionStorage.setItem('surveyTravelerEmail', travelerEmail);
+      return;
+    }
+
+    // ?demo=<tripId> opens a pre-generated trip straight at the options
+    // screen. Nothing is generated, so this path costs nothing to serve.
+    const demoTripId = params.get('demo');
+    if (demoTripId) {
+      setCurrentTripId(demoTripId);
+      setCurrentScreen('review-approve');
     }
   }, []);
+
+  // Open a pre-generated trip without leaving the app.
+  const handleOpenDemoTrip = (demoTripId: string) => {
+    setCurrentTripId(demoTripId);
+    setSelectedItineraryId(null);
+    setCurrentScreen('review-approve');
+  };
 
   // Scroll to top whenever screen changes
   useEffect(() => {
@@ -109,9 +125,10 @@ export default function App() {
     switch (currentScreen) {
       case "intent-capture":
         return (
-          <IntentCapture 
-            onStartPlanning={handleStartPlanning} 
+          <IntentCapture
+            onStartPlanning={handleStartPlanning}
             tripId={currentTripId}
+            onOpenDemoTrip={handleOpenDemoTrip}
           />
         );
       
@@ -188,6 +205,7 @@ export default function App() {
         return <IntentCapture
           tripId={currentTripId}
           onStartPlanning={handleStartPlanning}
+          onOpenDemoTrip={handleOpenDemoTrip}
         />;
     }
   };

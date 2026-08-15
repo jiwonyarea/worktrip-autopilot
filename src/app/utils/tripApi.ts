@@ -15,7 +15,11 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || `Request failed: ${response.statusText}`);
+    const error = new Error(data.error || `Request failed: ${response.statusText}`);
+    // Carry the API's structured fields so callers can branch on them
+    // (e.g. a rate-limited demo run offers the pre-generated trips instead).
+    Object.assign(error, data, { status: response.status });
+    throw error;
   }
 
   return response.json();
@@ -174,4 +178,34 @@ export interface Expense {
 /** List expenses filed against a trip, newest first. */
 export async function getExpenses(tripId: string): Promise<Expense[]> {
   return apiFetch<Expense[]>(`/trips/${tripId}/expenses`);
+}
+
+export interface DemoTrip {
+  trip_id: string;
+  label: string;
+  summary: string;
+  destination: string;
+  origin_city: string;
+  start_date: string;
+  end_date: string;
+  travelers: number;
+  option_count: number;
+}
+
+export interface DemoCatalog {
+  trips: DemoTrip[];
+  live_generation: {
+    available: boolean;
+    used: number;
+    limit: number;
+    resets: string;
+  };
+}
+
+/**
+ * Pre-generated trips anyone can explore for free, plus how much of today's
+ * live-generation quota is left. Serving these costs no API credit.
+ */
+export async function getDemoCatalog(): Promise<DemoCatalog> {
+  return apiFetch<DemoCatalog>('/demo-trips');
 }

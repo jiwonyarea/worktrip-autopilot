@@ -17,6 +17,14 @@ import {
   parseIntent,
 } from "./claude.ts";
 import { serpapiConfigured } from "./serpapi.ts";
+import {
+  addToCatalog,
+  checkRateLimit,
+  getCatalog,
+  hasBypass,
+  recordGeneration,
+  removeFromCatalog,
+} from "./demo.ts";
 
 const api = new Hono();
 
@@ -46,16 +54,20 @@ function today(): string {
 // Health
 // ---------------------------------------------------------------------------
 
-api.get("/health", (c) =>
-  c.json({
+api.get("/health", async (c) => {
+  const quota = await checkRateLimit().catch(() => null);
+  return c.json({
     status: "ok",
     // Surfaces which integrations are wired up without leaking key values.
     integrations: {
       anthropic: claudeConfigured(),
       serpapi: serpapiConfigured(),
     },
-  }),
-);
+    demo: quota
+      ? { generations_used: quota.used, daily_limit: quota.limit }
+      : null,
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Intent parsing
@@ -82,6 +94,77 @@ api.post("/parse-intent", async (c) => {
       500,
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// Demo mode
+// ---------------------------------------------------------------------------
+
+// Curated, already-generated trips. Serving these costs nothing, so the public
+// demo works without spending API credit or depending on the travel API.
+api.get("/demo-trips", async (c) => {
+  const catalog = await getCatalog();
+  const quota = await checkRateLimit();
+
+  const trips = await Promise.all(
+    catalog.map(async (entry) => {
+      const trip = await kv.get(`trip:${entry.trip_id}`);
+      if (!trip) return null;
+      return {
+        ...entry,
+        destination: trip.destination,
+        origin_city: trip.origin_city,
+        start_date: trip.start_date,
+        end_date: trip.end_date,
+        travelers: trip.travelers?.length ?? 1,
+        option_count: trip.itineraries?.length ?? 0,
+      };
+    }),
+  );
+
+  return c.json({
+    trips: trips.filter(Boolean),
+    live_generation: {
+      available: quota.allowed,
+      used: quota.used,
+      limit: quota.limit,
+      resets: quota.resets,
+    },
+  });
+});
+
+// Curating the catalog is an owner action, gated on the bypass token.
+api.post("/demo-trips", async (c) => {
+  if (!hasBypass(c.req.raw)) {
+    return c.json({ error: "Not authorized" }, 403);
+  }
+
+  const { trip_id, label, summary } = await c.req.json();
+  if (!trip_id) return c.json({ error: "trip_id is required" }, 400);
+
+  const trip = await kv.get(`trip:${trip_id}`);
+  if (!trip) return c.json({ error: "Trip not found" }, 404);
+  if (!trip.itineraries?.length) {
+    return c.json(
+      { error: "Generate itineraries for this trip before featuring it" },
+      400,
+    );
+  }
+
+  return c.json({
+    catalog: await addToCatalog({
+      trip_id,
+      label: label ?? trip.trip_name,
+      summary: summary ?? `${trip.origin_city} to ${trip.destination}`,
+    }),
+  });
+});
+
+api.delete("/demo-trips/:tripId", async (c) => {
+  if (!hasBypass(c.req.raw)) {
+    return c.json({ error: "Not authorized" }, 403);
+  }
+  return c.json({ catalog: await removeFromCatalog(c.req.param("tripId")) });
 });
 
 // ---------------------------------------------------------------------------
@@ -308,7 +391,32 @@ api.get("/trips/:tripId/preferences", async (c) => {
 
 api.post("/trips/:tripId/generate-itineraries", async (c) => {
   try {
-    return c.json(await generateItineraries(c.req.param("tripId")));
+    // Live generation costs travel-API searches and model tokens, so the public
+    // demo gets a daily cap. Visitors who hit it are pointed at the free
+    // pre-generated trips instead.
+    const bypass = hasBypass(c.req.raw);
+    if (!bypass) {
+      const quota = await checkRateLimit();
+      if (!quota.allowed) {
+        return c.json(
+          {
+            error:
+              "Today's live demo runs are all used up. You can still explore a " +
+              "previously generated trip, or check back tomorrow.",
+            rate_limited: true,
+            used: quota.used,
+            limit: quota.limit,
+            resets: quota.resets,
+          },
+          429,
+        );
+      }
+    }
+
+    const result = await generateItineraries(c.req.param("tripId"));
+    // Only count generations that actually produced itineraries.
+    if (!bypass) await recordGeneration();
+    return c.json(result);
   } catch (error) {
     if (error instanceof GenerationError) {
       console.warn(`generate-itineraries: ${error.message}`);

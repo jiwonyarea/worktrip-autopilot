@@ -40,6 +40,13 @@ storage bucket.
 | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | Pay per token |
 | `SERPAPI_API_KEY` | [serpapi.com](https://serpapi.com) | 100 searches/mo free |
 
+Optional, for a public demo:
+
+| Secret | Purpose | Default |
+| --- | --- | --- |
+| `DAILY_GENERATION_LIMIT` | Live generations allowed per day. `0` serves only pre-generated trips. | 20 |
+| `DEMO_BYPASS_TOKEN` | Sent as `x-demo-bypass`; skips the cap and authorizes curating the demo catalog. | none |
+
 ### 4. Deploy the API
 
 ```bash
@@ -101,6 +108,41 @@ Base: `{SUPABASE_URL}/functions/v1/server`
 The agent may only use inventory SerpApi returned — it is instructed never to
 invent an airline, flight number, hotel, or price, and totals are recomputed
 server-side rather than trusted from the model.
+
+## Public demo mode
+
+Running the agent costs travel-API searches and model tokens, so the public
+demo is free by default and metered only where it has to be.
+
+- **Pre-generated trips** are served straight from the database — real
+  airlines, real prices, no API calls. `GET /demo-trips` lists them and
+  `?demo=<tripId>` opens one at the options screen. This path costs nothing
+  and works even if the travel API is down.
+- **Live generation** is capped per day (`DAILY_GENERATION_LIMIT`). Past the
+  cap the API returns 429 with `rate_limited: true`, and the UI offers a
+  pre-generated trip instead of a retry that cannot succeed.
+- **Curating the catalog** is owner-only, gated on `DEMO_BYPASS_TOKEN`:
+
+```bash
+curl -X POST "$VITE_SUPABASE_URL/functions/v1/server/demo-trips" \
+  -H "Authorization: Bearer $VITE_SUPABASE_ANON_KEY" \
+  -H "x-demo-bypass: $DEMO_BYPASS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"trip_id":"...","label":"Conference trip","summary":"SFO to SEA"}'
+```
+
+The same header on `generate-itineraries` skips the daily cap, so you can
+still generate on a day the public quota is spent.
+
+### Keeping the demo awake
+
+Supabase pauses free-tier projects after ~7 days idle, which would leave the
+demo dead for anyone opening it during a quiet stretch.
+`.github/workflows/keep-supabase-awake.yml` pings `/health` every 3 days —
+that endpoint reads the quota counter from Postgres, so it registers as real
+database activity. Push the repo to GitHub and add two repository secrets
+(`SUPABASE_URL`, `SUPABASE_ANON_KEY`). Without GitHub, any external cron
+service hitting the same URL works.
 
 ## Current limitations
 

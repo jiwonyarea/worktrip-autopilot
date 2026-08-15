@@ -4,13 +4,15 @@ import { toast } from "sonner";
 import { Mic, MapPin, Calendar, Users, Briefcase, Sparkles, Loader2, Plane, Hotel, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import { Trip, createTrip, updateTrip, parseIntentText } from "../../utils/tripApi";
+import { Trip, DemoTrip, DemoCatalog, createTrip, updateTrip, parseIntentText, getDemoCatalog } from "../../utils/tripApi";
 import { motion } from "motion/react";
 import heroLogo from "../../../assets/brand/worktrip-autopilot-mark.svg";
 
 interface IntentCaptureProps {
   onStartPlanning: (tripId: string, trip: Trip) => void;
   tripId?: string | null;
+  /** Open a pre-generated trip without running the agent. */
+  onOpenDemoTrip?: (tripId: string) => void;
 }
 
 // Parsed fields interface
@@ -68,13 +70,36 @@ const INTENT_SUGGESTIONS = [
   },
 ];
 
-export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
+export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: IntentCaptureProps) {
   const [intent, setIntent] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [serverTrip, setServerTrip] = useState<Trip | null>(null);
   const [parsedFields, setParsedFields] = useState<ParsedFields | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [demoTrips, setDemoTrips] = useState<DemoTrip[]>([]);
+  const [quota, setQuota] = useState<DemoCatalog["live_generation"] | null>(null);
+  const [loadingDemos, setLoadingDemos] = useState(true);
+
+  // Example trips are pre-generated, so this is a plain read.
+  useEffect(() => {
+    let cancelled = false;
+    getDemoCatalog()
+      .then((catalog) => {
+        if (cancelled) return;
+        setDemoTrips(catalog.trips);
+        setQuota(catalog.live_generation);
+      })
+      .catch((error) => {
+        console.error("Could not load example trips:", error);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDemos(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const inputRef = useRef<HTMLInputElement>(null);
   const parseTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -351,79 +376,72 @@ export function IntentCapture({ onStartPlanning, tripId }: IntentCaptureProps) {
           ))}
         </div>
 
-        {/* My Itinerary Section (matching Figma design) */}
+        {/* Pre-generated trips — free to open, so the demo always works even
+            when the daily live-generation quota is spent. */}
         <div className="max-w-[1088px] mx-auto">
-          <h2 className="text-[#1f2933] text-base font-semibold mb-4">My Itinerary</h2>
-          
-          {/* Trip Card 1 */}
-          <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] p-6 mb-4 relative">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-[#1f2933] text-base font-semibold m-0">Sales Kickoff 2026</h3>
-                  <Badge className="bg-[#d1f4e0] text-[#52c93f] border border-[rgba(31,157,85,0.36)] rounded-full px-3 py-1 text-xs">
-                    ✓ Booked
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-[#4a5565]">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>Las Vegas</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>2026-01-20 - 2026-01-25</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    <span>1 traveler</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="w-4 h-4" />
-                    <span>Sales kickoff</span>
-                  </div>
-                </div>
-              </div>
-              <Button className="bg-[#F2F1F8] text-[#916AF5] border border-[#916AF5] hover:bg-[#ddd0ff] rounded-lg px-4 py-2 text-sm self-center">
-                View
-              </Button>
-            </div>
+          <div className="flex items-baseline justify-between mb-4 gap-4">
+            <h2 className="text-[#1f2933] text-base font-semibold">
+              {demoTrips.length > 0 ? "Explore a finished trip" : "My Itinerary"}
+            </h2>
+            {quota && !quota.available && (
+              <span className="text-xs text-[#4a5565]">
+                Today's live runs are used up — these are ready to explore
+              </span>
+            )}
           </div>
 
-          {/* Trip Card 2 */}
-          <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] p-6 relative">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-[#1f2933] text-base font-semibold m-0">Client Visit - Acme Corp</h3>
-                  <Badge className="bg-[#d1f4e0] text-[#52c93f] border border-[rgba(31,157,85,0.36)] rounded-full px-3 py-1 text-xs">
-                    ✓ Booked
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-[#4a5565]">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>Chicago</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>2026-02-10 - 2026-02-12</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    <span>3 travelers</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="w-4 h-4" />
-                    <span>Client meeting</span>
-                  </div>
-                </div>
-              </div>
-              <Button className="bg-[#F2F1F8] text-[#916AF5] border border-[#916AF5] hover:bg-[#ddd0ff] rounded-lg px-4 py-2 text-sm self-center">
-                View
-              </Button>
+          {loadingDemos && (
+            <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-sm p-6 flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin text-[#916AF5]" />
+              <span className="text-sm text-[#4a5565]">Loading example trips…</span>
             </div>
-          </div>
+          )}
+
+          {!loadingDemos && demoTrips.length === 0 && (
+            <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-sm p-6">
+              <p className="text-sm text-[#4a5565] m-0">
+                No trips yet — describe one above and the agent will plan it.
+              </p>
+            </div>
+          )}
+
+          {demoTrips.map((demo) => (
+            <div
+              key={demo.trip_id}
+              className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] p-6 mb-4 relative"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                    <h3 className="text-[#1f2933] text-base font-semibold m-0">{demo.label}</h3>
+                    <Badge className="bg-[#EDE7FD] text-[#916AF5] border border-[#916AF5]/30 rounded-full px-3 py-1 text-xs">
+                      {demo.option_count} options ready
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-[#4a5565]">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      <span>{demo.origin_city} → {demo.destination}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>{demo.start_date} - {demo.end_date}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      <span>{demo.travelers} traveler{demo.travelers === 1 ? "" : "s"}</span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => onOpenDemoTrip?.(demo.trip_id)}
+                  className="bg-[#F2F1F8] text-[#916AF5] border border-[#916AF5] hover:bg-[#ddd0ff] rounded-lg px-4 py-2 text-sm self-center flex-shrink-0"
+                >
+                  View
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

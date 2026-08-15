@@ -23,6 +23,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
   const [isLoading, setIsLoading] = useState(!tripData);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rateLimited, setRateLimited] = useState(false);
 
   // Fetch trip data on mount if not provided
   useEffect(() => {
@@ -68,6 +69,9 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
       setError(
         err instanceof Error ? err.message : "Could not build itineraries for this trip",
       );
+      // A spent daily quota is not a failure of this trip — send people to the
+      // pre-generated ones rather than a retry that cannot succeed today.
+      setRateLimited(Boolean((err as { rate_limited?: boolean })?.rate_limited));
       setIsGenerating(false);
     }
   };
@@ -135,12 +139,21 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
         {error && (
           <div className="bg-white/70 backdrop-blur-xl rounded-3xl border border-[#FF4D4D]/20 shadow-lg p-8 mb-6">
             <div className="text-center">
-              <Button
-                onClick={handleGenerateItineraries}
-                className="bg-[#0A0A0A] hover:bg-[#1A1A1A] text-white rounded-full px-10 py-6"
-              >
-                Try again
-              </Button>
+              {rateLimited ? (
+                <Button
+                  onClick={() => (window.location.href = "/")}
+                  className="bg-[#916AF5] hover:bg-[#7c5dd4] text-white rounded-full px-10 py-6"
+                >
+                  Explore a finished trip instead
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleGenerateItineraries}
+                  className="bg-[#0A0A0A] hover:bg-[#1A1A1A] text-white rounded-full px-10 py-6"
+                >
+                  Try again
+                </Button>
+              )}
             </div>
           </div>
         )}
