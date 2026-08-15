@@ -17,6 +17,7 @@ import {
   parseIntent,
 } from "./claude.ts";
 import { serpapiConfigured } from "./serpapi.ts";
+import { clientIp, detectLocation } from "./geo.ts";
 import {
   addToCatalog,
   checkRateLimit,
@@ -67,6 +68,17 @@ api.get("/health", async (c) => {
       ? { generations_used: quota.used, daily_limit: quota.limit }
       : null,
   });
+});
+
+// ---------------------------------------------------------------------------
+// Location
+// ---------------------------------------------------------------------------
+
+// Best-guess departure city from the caller's IP, so people can say just a
+// destination. Always a suggestion — it is wrong behind a VPN, and anything
+// the traveler states explicitly takes precedence.
+api.get("/detect-location", async (c) => {
+  return c.json(await detectLocation(clientIp(c.req.raw)));
 });
 
 // ---------------------------------------------------------------------------

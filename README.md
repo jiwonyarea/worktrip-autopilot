@@ -79,6 +79,7 @@ Base: `{SUPABASE_URL}/functions/v1/server`
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Status + which integrations are configured |
+| `GET` | `/detect-location` | Best-guess departure city from the caller's IP |
 | `POST` | `/parse-intent` | Free text → structured trip fields |
 | `POST` | `/trips` | Create a trip |
 | `GET·PUT·DELETE` | `/trips/:id` | Read / update / delete |
@@ -157,6 +158,11 @@ service hitting the same URL works.
   API on 2026-07-17; only Enterprise access remains. That is why this uses
   SerpApi. The provider lives in one module (`serpapi.ts`), so swapping it
   again means rewriting that file only.
+- **Location detection is a suggestion.** The departure city is resolved from
+  the caller's IP via ipwho.is (city-level at best, wrong behind a VPN) and is
+  only used when the traveler does not state an origin. The visitor's IP is
+  sent to that third party; results are cached per address for a day. Anything
+  stated explicitly always wins.
 - **No authentication.** Every visitor sees the same trips, and the expenses
   RLS policies are open (see the DEMO POSTURE comments in the migration). Add
   auth before this handles anyone's real spend.

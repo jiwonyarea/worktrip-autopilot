@@ -167,10 +167,14 @@ export function resolveAirports(
     effort: "low",
     maxTokens: 1000,
     system:
-      "You map city names to IATA airport codes. For metro areas with multiple " +
+      "You map places to IATA airport codes. For a metro area with several " +
       "airports, choose the primary international airport with the broadest " +
-      "commercial service. Set the *_confident flag to false if you are unsure " +
-      "the city exists or has commercial air service — never guess a plausible " +
+      "commercial service. Locations may arrive as a township, suburb, or " +
+      "neighbourhood rather than a city — detected from an IP address — so " +
+      "resolve to the nearest airport that actually serves that place " +
+      "(e.g. 'North Fayette, Pennsylvania' is served by PIT). Set the " +
+      "*_confident flag to false only if the place cannot be located at all " +
+      "or has no reachable commercial airport — never guess a plausible " +
       "looking code.",
     content: `Origin: ${originCity}\nDestination: ${destinationCity}`,
     schema: AIRPORTS_SCHEMA,

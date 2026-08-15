@@ -209,3 +209,20 @@ export interface DemoCatalog {
 export async function getDemoCatalog(): Promise<DemoCatalog> {
   return apiFetch<DemoCatalog>('/demo-trips');
 }
+
+export interface DetectedLocation {
+  detected: boolean;
+  city: string;
+  region: string;
+  country: string;
+  reason?: string;
+}
+
+/**
+ * Best-guess departure city from the caller's IP, so a traveler can state only
+ * a destination. Always a suggestion: it is city-level at best and wrong behind
+ * a VPN, so anything stated explicitly should win.
+ */
+export async function detectLocation(): Promise<DetectedLocation> {
+  return apiFetch<DetectedLocation>('/detect-location');
+}

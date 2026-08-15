@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Mic, MicOff, Square, MapPin, Calendar, Users, Briefcase, Sparkles, Loader2, Plane, Hotel, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import { Trip, DemoTrip, DemoCatalog, createTrip, updateTrip, parseIntentText, getDemoCatalog } from "../../utils/tripApi";
+import { Trip, DemoTrip, DemoCatalog, createTrip, updateTrip, parseIntentText, getDemoCatalog, detectLocation, DetectedLocation } from "../../utils/tripApi";
 import { motion } from "motion/react";
 import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
 import heroLogo from "../../../assets/brand/worktrip-autopilot-mark.svg";
@@ -81,6 +81,22 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
   const [demoTrips, setDemoTrips] = useState<DemoTrip[]>([]);
   const [quota, setQuota] = useState<DemoCatalog["live_generation"] | null>(null);
   const [loadingDemos, setLoadingDemos] = useState(true);
+  const [detectedOrigin, setDetectedOrigin] = useState<DetectedLocation | null>(null);
+
+  // Resolve the departure city up front so people can say just a destination,
+  // the way flight search sites behave. Failure is silent — the traveler can
+  // always state an origin themselves.
+  useEffect(() => {
+    let cancelled = false;
+    detectLocation()
+      .then((location) => {
+        if (!cancelled && location.detected) setDetectedOrigin(location);
+      })
+      .catch((error) => console.error("Location detection failed:", error));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Dictation. Finalised phrases append to `intent`; the in-progress phrase
   // lives in `interim` and is only displayed, so the parse never runs against
@@ -192,8 +208,12 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
     }, 100);
   };
 
+  // Detection supplies the origin only when the traveler did not state one.
+  const effectiveOrigin = parsedFields?.origin_city || detectedOrigin?.city || "";
+  const originWasDetected = Boolean(!parsedFields?.origin_city && detectedOrigin?.city);
+
   const isMissingCriticalFields =
-    parsedFields && (!parsedFields.destination || !parsedFields.dates || !parsedFields.origin_city);
+    parsedFields && (!parsedFields.destination || !parsedFields.dates || !effectiveOrigin);
 
   const handleSubmit = async () => {
     if (speech.listening) speech.stop();
@@ -214,7 +234,9 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
         ? await updateTrip(serverTrip.id, {
             intent_text: intent,
             destination: parsedFields.destination,
-            origin_city: parsedFields.origin_city,
+            origin_city: originWasDetected
+              ? [detectedOrigin?.city, detectedOrigin?.region].filter(Boolean).join(", ")
+              : parsedFields.origin_city,
             start_date: parsedFields.dates?.start_date,
             end_date: parsedFields.dates?.end_date,
             trip_name: parsedFields.trip_name,
@@ -223,7 +245,9 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
         : await createTrip({
             intentText: intent,
             destination: parsedFields.destination,
-            origin_city: parsedFields.origin_city,
+            origin_city: originWasDetected
+              ? [detectedOrigin?.city, detectedOrigin?.region].filter(Boolean).join(", ")
+              : parsedFields.origin_city,
             start_date: parsedFields.dates?.start_date,
             end_date: parsedFields.dates?.end_date,
             travelers_count: parsedFields.travelers_count,
@@ -324,6 +348,17 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
           </div>
         </div>
 
+        {/* Detection runs before anyone types, so surface it as a hint rather
+            than leaving people to guess whether they must state an origin. */}
+        {detectedOrigin?.city && !intent.trim() && (
+          <div className="max-w-[710px] mx-auto -mt-2 mb-6 flex items-center justify-center gap-1.5 text-xs text-[#4a5565]">
+            <MapPin className="w-3.5 h-3.5" />
+            <span>
+              Departing from <span className="text-[#1f2933] font-medium">{detectedOrigin.city}</span> — just say where you're going
+            </span>
+          </div>
+        )}
+
         {/* Reading state — the parse round-trips to the agent, so say so. */}
         {isParsing && !parsedFields && (
           <div className="max-w-[710px] mx-auto mb-6">
@@ -371,11 +406,18 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-[#4a5565]" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-gray-500 m-0">From</p>
-                    <p className="text-sm text-gray-900 m-0">
-                      {parsedFields.origin_city || (
+                    <p className="text-sm text-gray-900 m-0 flex items-center gap-1.5 flex-wrap">
+                      {effectiveOrigin || (
                         <span className="text-amber-600">Not detected</span>
+                      )}
+                      {originWasDetected && (
+                        // Say where this came from, so an IP-based guess is
+                        // never mistaken for something the traveler said.
+                        <span className="text-[11px] text-[#916AF5] bg-[#EDE7FD] rounded-full px-2 py-0.5 whitespace-nowrap">
+                          your location
+                        </span>
                       )}
                     </p>
                   </div>
