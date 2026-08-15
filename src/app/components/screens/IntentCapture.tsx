@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
-import { Mic, MapPin, Calendar, Users, Briefcase, Sparkles, Loader2, Plane, Hotel, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Mic, MicOff, Square, MapPin, Calendar, Users, Briefcase, Sparkles, Loader2, Plane, Hotel, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Trip, DemoTrip, DemoCatalog, createTrip, updateTrip, parseIntentText, getDemoCatalog } from "../../utils/tripApi";
 import { motion } from "motion/react";
+import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
 import heroLogo from "../../../assets/brand/worktrip-autopilot-mark.svg";
 
 interface IntentCaptureProps {
@@ -81,6 +82,30 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
   const [quota, setQuota] = useState<DemoCatalog["live_generation"] | null>(null);
   const [loadingDemos, setLoadingDemos] = useState(true);
 
+  // Dictation. Finalised phrases append to `intent`; the in-progress phrase
+  // lives in `interim` and is only displayed, so the parse never runs against
+  // a half-spoken sentence.
+  const appendTranscript = useCallback((transcript: string) => {
+    setIntent((current) => {
+      const trimmed = current.trimEnd();
+      if (!trimmed) return transcript;
+      // Speech results arrive without leading spaces or sentence punctuation.
+      const separator = /[.!?]$/.test(trimmed) ? " " : " ";
+      return `${trimmed}${separator}${transcript}`;
+    });
+  }, []);
+
+  const speech = useSpeechRecognition({ onResult: appendTranscript });
+
+  // Surface a blocked microphone once, rather than silently doing nothing.
+  useEffect(() => {
+    if (speech.error) toast.error(speech.error);
+  }, [speech.error]);
+
+  const displayedIntent = speech.interim
+    ? `${intent}${intent && !intent.endsWith(" ") ? " " : ""}${speech.interim}`
+    : intent;
+
   // Example trips are pre-generated, so this is a plain read.
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +133,11 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
   // Debounced while typing; the result also gates the Generate button.
   useEffect(() => {
     if (parseTimeoutRef.current) clearTimeout(parseTimeoutRef.current);
+
+    // Hold off while someone is still speaking. Each finalised phrase would
+    // otherwise fire its own parse against a half-finished sentence; this runs
+    // once, on the whole thing, when they stop.
+    if (speech.listening) return;
 
     const text = intent.trim();
     if (text.length < 12) {
@@ -152,9 +182,10 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
       cancelled = true;
       if (parseTimeoutRef.current) clearTimeout(parseTimeoutRef.current);
     };
-  }, [intent]);
+  }, [intent, speech.listening]);
 
   const handleSuggestionClick = (suggestionText: string) => {
+    if (speech.listening) speech.stop();
     setIntent(suggestionText);
     setTimeout(() => {
       inputRef.current?.focus();
@@ -165,6 +196,8 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
     parsedFields && (!parsedFields.destination || !parsedFields.dates || !parsedFields.origin_city);
 
   const handleSubmit = async () => {
+    if (speech.listening) speech.stop();
+
     if (!intent.trim()) {
       toast.error("Tell me about the trip first");
       return;
@@ -232,10 +265,17 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
           <div className="relative bg-white/80 backdrop-blur-xl rounded-[57px] border-[1.818px] border-white/50 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
             <input
               ref={inputRef}
-              value={intent}
+              value={displayedIntent}
               onChange={(e) => setIntent(e.target.value)}
-              placeholder={`Try: Book me a trip from Pittsburgh to New York City ${exampleDates(30, 3)} for 2 passengers`}
-              className="flex-1 bg-transparent border-none outline-none text-[#717182] text-[14px] tracking-[-0.15px] placeholder:text-[#717182]"
+              // While dictating the field mirrors the live transcript, so it is
+              // not a normal editable value until recording stops.
+              readOnly={speech.listening}
+              placeholder={
+                speech.listening
+                  ? "Listening — start describing the trip…"
+                  : `Try: Book me a trip from Pittsburgh to New York City ${exampleDates(30, 3)} for 2 passengers`
+              }
+              className="flex-1 bg-transparent border-none outline-none text-[#717182] text-[14px] tracking-[-0.15px] placeholder:text-[#717182] min-w-0"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -243,9 +283,38 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                 }
               }}
             />
-            <button className="flex-shrink-0">
-              <Mic className="w-6 h-6 text-[#767676]" />
-            </button>
+
+            {speech.supported ? (
+              <button
+                type="button"
+                onClick={() => (speech.listening ? speech.stop() : speech.start())}
+                aria-label={speech.listening ? "Stop dictating" : "Dictate your trip"}
+                aria-pressed={speech.listening}
+                title={speech.listening ? "Stop dictating" : "Dictate your trip"}
+                className={`flex-shrink-0 relative w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                  speech.listening
+                    ? "bg-[#916AF5] text-white"
+                    : "text-[#767676] hover:bg-black/5"
+                }`}
+              >
+                {speech.listening ? (
+                  <>
+                    {/* Pulse conveys that audio is being captured right now. */}
+                    <span className="absolute inset-0 rounded-full bg-[#916AF5] opacity-60 animate-ping" />
+                    <Square className="w-4 h-4 relative z-10 fill-current" />
+                  </>
+                ) : (
+                  <Mic className="w-6 h-6" />
+                )}
+              </button>
+            ) : (
+              <span
+                title="Voice input needs Chrome, Edge, or Safari"
+                className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[#c4c7ce] cursor-not-allowed"
+              >
+                <MicOff className="w-5 h-5" />
+              </span>
+            )}
           </div>
         </div>
 
