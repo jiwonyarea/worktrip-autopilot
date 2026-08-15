@@ -118,6 +118,12 @@ export function useSpeechRecognition(options: {
   const wantsToListenRef = useRef(false);
   // Keep the latest callback without re-creating the recognition instance.
   const onResultRef = useRef(onResult);
+  const restartTimerRef = useRef<number | null>(null);
+  // A session that ends immediately and repeatedly means restarting is not
+  // working (mic held elsewhere, backend unreachable). Back out rather than
+  // spinning forever with the UI claiming to listen.
+  const restartsRef = useRef(0);
+  const sawResultRef = useRef(false);
 
   useEffect(() => {
     onResultRef.current = onResult;
@@ -133,6 +139,15 @@ export function useSpeechRecognition(options: {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
+    const debug = (...args: unknown[]) => {
+      if (import.meta.env.DEV) console.debug("[speech]", ...args);
+    };
+
+    recognition.onstart = () => {
+      debug("session started", { lang: recognition.lang });
+      setListening(true);
+    };
+
     recognition.onresult = (event) => {
       let finalText = "";
       let pending = "";
@@ -144,6 +159,11 @@ export function useSpeechRecognition(options: {
         else pending += text;
       }
 
+      // Any result at all proves the pipeline works; stop counting restarts.
+      sawResultRef.current = true;
+      restartsRef.current = 0;
+      debug("result", { final: finalText, interim: pending });
+
       setInterim(pending);
       if (finalText.trim()) {
         onResultRef.current(finalText.trim());
@@ -152,6 +172,7 @@ export function useSpeechRecognition(options: {
     };
 
     recognition.onerror = (event) => {
+      debug("error", event.error);
       // Silence between sentences is normal, not a failure worth surfacing.
       if (event.error === "no-speech" || event.error === "aborted") return;
 
@@ -162,23 +183,52 @@ export function useSpeechRecognition(options: {
     };
 
     recognition.onend = () => {
-      // Restart if the browser timed out but the person never pressed stop.
-      if (wantsToListenRef.current) {
+      debug("session ended", {
+        wantsToListen: wantsToListenRef.current,
+        restarts: restartsRef.current,
+      });
+
+      if (!wantsToListenRef.current) {
+        setListening(false);
+        setInterim("");
+        return;
+      }
+
+      // Give up if sessions keep ending before a single word is recognised.
+      if (!sawResultRef.current && restartsRef.current >= 3) {
+        wantsToListenRef.current = false;
+        setListening(false);
+        setInterim("");
+        setError(
+          "Voice input could not hear anything. Check that the right microphone " +
+            "is selected and no other app is using it, then try again.",
+        );
+        return;
+      }
+
+      restartsRef.current += 1;
+
+      // Restarting synchronously inside onend throws InvalidStateError in
+      // Chrome, because the previous session still holds the mic. Yield first.
+      restartTimerRef.current = window.setTimeout(() => {
+        if (!wantsToListenRef.current) return;
         try {
           recognition.start();
-          return;
-        } catch {
-          // Already restarting; fall through and settle into the stopped state.
+        } catch (err) {
+          debug("restart failed", err);
+          wantsToListenRef.current = false;
+          setListening(false);
+          setInterim("");
         }
-      }
-      setListening(false);
-      setInterim("");
+      }, 250);
     };
 
     recognitionRef.current = recognition;
 
     return () => {
       wantsToListenRef.current = false;
+      if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
+      recognition.onstart = null;
       recognition.onresult = null;
       recognition.onerror = null;
       recognition.onend = null;
@@ -194,9 +244,13 @@ export function useSpeechRecognition(options: {
     setError(null);
     setInterim("");
     wantsToListenRef.current = true;
+    restartsRef.current = 0;
+    sawResultRef.current = false;
 
     try {
       recognition.start();
+      // onstart flips `listening`; set it here too so the button reacts
+      // immediately rather than waiting on the browser.
       setListening(true);
     } catch {
       // start() throws if a session is already running — treat as listening.
@@ -207,6 +261,7 @@ export function useSpeechRecognition(options: {
   const stop = useCallback(() => {
     const recognition = recognitionRef.current;
     wantsToListenRef.current = false;
+    if (restartTimerRef.current) window.clearTimeout(restartTimerRef.current);
     setListening(false);
     setInterim("");
     recognition?.stop();
