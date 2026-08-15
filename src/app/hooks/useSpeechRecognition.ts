@@ -134,7 +134,10 @@ export function useSpeechRecognition(options: {
     if (!Ctor) return;
 
     const recognition = new Ctor();
-    recognition.lang = lang ?? navigator.language ?? "en-US";
+    // Default to en-US rather than navigator.language: the recogniser is
+    // matching US city and airline names, and the en-US model handles those
+    // markedly better than other English variants.
+    recognition.lang = lang ?? "en-US";
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
@@ -164,7 +167,9 @@ export function useSpeechRecognition(options: {
       // Any result at all proves the pipeline works; stop counting restarts.
       sawResultRef.current = true;
       restartsRef.current = 0;
-      debug("result", { final: finalText, interim: pending });
+      // Interim results fire per syllable; logging each one buries everything
+      // else, so only finalised phrases are reported.
+      if (finalText.trim()) debug("phrase", finalText.trim());
 
       setInterim(pending);
       if (finalText.trim()) {
