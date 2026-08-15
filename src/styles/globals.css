@@ -247,3 +247,12 @@ html {
 [data-sonner-toast][data-type="error"] [data-icon] {
   color: #D64545 !important;
 }
+/* Horizontally scrollable strips (e.g. the nav on phones) that shouldn't show
+   a scrollbar. The content still scrolls; only the bar is hidden. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -184,7 +184,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, tripId }:
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Content Container */}
-      <div className="relative z-10 max-w-[1088px] mx-auto px-6 pt-8">
+      <div className="relative z-10 max-w-[1088px] mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
         {/* Purple Banner */}
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-gradient-to-b from-[#916af5] to-[#b2a5fb] rounded-[14px] shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1)] w-[48px] h-[48px] flex items-center justify-center">

@@ -19,8 +19,8 @@ export function AppShell({ children, currentNav = "Trips", onNavChange, onLogoCl
       />
       
       {/* Frosted Glass Top Navigation Bar */}
-      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/50 h-16 flex items-center px-6 shadow-sm">
-        <div className="flex items-center gap-12 flex-1">
+      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/50 h-16 flex items-center px-4 sm:px-6 shadow-sm">
+        <div className="flex items-center gap-4 sm:gap-8 lg:gap-12 flex-1 min-w-0">
           <button 
             onClick={onLogoClick}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
@@ -28,16 +28,16 @@ export function AppShell({ children, currentNav = "Trips", onNavChange, onLogoCl
             <img
               src={gnbLogo}
               alt="Worktrip Autopilot"
-              className="h-[26px] w-auto"
+              className="h-[22px] sm:h-[26px] w-auto"
             />
           </button>
           
-          <nav className="flex gap-6">
+          <nav className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar">
             {["Trips", "Policies", "Expenses"].map((item) => (
               <button
                 key={item}
                 onClick={() => onNavChange?.(item)}
-                className={`text-sm transition-all ${
+                className={`text-sm transition-all whitespace-nowrap ${
                   currentNav === item
                     ? "text-[#0A0A0A] font-medium"
                     : "text-[#4A5565] hover:text-[#0A0A0A]"

@@ -187,7 +187,7 @@ export function ExpensesReport({ tripId = "default-trip", onBack }: ExpensesRepo
 
   return (
     <div className="p-8">
-      <div className="max-w-[1088px] mx-auto">
+      <div className="max-w-[1088px] mx-auto px-4 sm:px-0">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -236,9 +236,9 @@ export function ExpensesReport({ tripId = "default-trip", onBack }: ExpensesRepo
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column - Expenses Table */}
-          <div className="col-span-8">
+          <div className="lg:col-span-8 min-w-0">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="m-0">Expenses ({expenses.length})</h2>
@@ -260,7 +260,8 @@ export function ExpensesReport({ tripId = "default-trip", onBack }: ExpensesRepo
                     <p className="text-sm text-gray-400 m-0">Upload a receipt to get started!</p>
                   </div>
                 ) : (
-                  <table className="w-full">
+                  <div className="overflow-x-auto">
+                  <table className="w-full min-w-[560px]">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="text-left px-4 py-3 text-sm text-gray-600 w-8"></th>
@@ -331,6 +332,7 @@ export function ExpensesReport({ tripId = "default-trip", onBack }: ExpensesRepo
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             </div>

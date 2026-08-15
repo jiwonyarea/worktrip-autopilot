@@ -217,7 +217,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Content Container */}
-      <div className="relative z-10 max-w-[1088px] mx-auto px-6 pt-[112px]">
+      <div className="relative z-10 max-w-[1088px] mx-auto px-4 sm:px-6 pt-16 sm:pt-[112px]">
         {/* Centered Worktrip Autopilot Logo */}
         <div className="text-center mb-12">
           <img
@@ -229,7 +229,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
 
         {/* Main Search Bar */}
         <div className="max-w-[710px] mx-auto mb-6">
-          <div className="relative bg-white/80 backdrop-blur-xl rounded-[57px] border-[1.818px] border-white/50 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] h-[64px] flex items-center px-6 gap-4">
+          <div className="relative bg-white/80 backdrop-blur-xl rounded-[57px] border-[1.818px] border-white/50 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
             <input
               ref={inputRef}
               value={intent}
@@ -293,7 +293,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-[#4a5565]" />
                   <div>
@@ -363,12 +363,12 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
         )}
 
         {/* Suggestion Cards */}
-        <div className="flex gap-3 justify-center mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-12 max-w-[790px] mx-auto">
           {INTENT_SUGGESTIONS.map((suggestion, index) => (
             <button
               key={index}
               onClick={() => handleSuggestionClick(suggestion.text)}
-              className="bg-white/60 backdrop-blur-sm border border-white/50 rounded-2xl shadow-sm hover:shadow-md hover:bg-white/80 transition-all p-4 w-[254px] text-left"
+              className="bg-white/60 backdrop-blur-sm border border-white/50 rounded-2xl shadow-sm hover:shadow-md hover:bg-white/80 transition-all p-4 w-full text-left"
             >
               <p className="text-xs font-medium text-[#101828] m-0 mb-1">{suggestion.label}</p>
               <p className="text-xs text-[#4a5565] m-0 line-clamp-2">{suggestion.text}</p>

@@ -48,7 +48,7 @@ function FlightCard({ flight, raw }: { flight: ParsedFlight | null; raw?: string
           <img src={imgImageAirline} alt={flight.airline} className="w-6 h-6 object-contain" />
         </div>
 
-        <div className="flex items-center gap-6 flex-1 p-[0px] mt-[0px] mr-[100px] mb-[0px] ml-[0px]">
+        <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0 mr-0 lg:mr-8">
           <div className="text-center">
             <p className="text-sm font-semibold text-[#101828]">{flight.departTime}</p>
             <p className="text-xs text-[#6a7282]">{flight.from}</p>
@@ -70,7 +70,7 @@ function FlightCard({ flight, raw }: { flight: ParsedFlight | null; raw?: string
           </div>
         </div>
 
-        <div className="flex flex-col items-end text-[10px] text-[#6a7282] gap-1">
+        <div className="hidden sm:flex flex-col items-end text-[10px] text-[#6a7282] gap-1 flex-shrink-0">
           <div className="flex items-center gap-1">
             <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
               <rect x="3" y="2" width="6" height="7" rx="1" stroke="currentColor" strokeWidth="1"/>
@@ -201,7 +201,7 @@ export function EditItineraryinDetail({
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Main Content - Max Width 1088px */}
-      <div className="relative max-w-[1088px] mx-auto px-6 pt-8 z-10">
+      <div className="relative max-w-[1088px] mx-auto px-4 sm:px-6 pt-6 sm:pt-8 z-10">
         {/* Header Section */}
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-gradient-to-b from-[#916af5] to-[#b2a5fb] rounded-2xl shadow-md w-12 h-12 flex items-center justify-center flex-shrink-0">
@@ -268,10 +268,10 @@ export function EditItineraryinDetail({
 
         {/* Main Content - 3 Separate Cards */}
         {/* White Container Card */}
-        <div className="bg-[#ffffff] rounded-[24px] p-[18px] shadow-sm">
+        <div className="bg-[#ffffff] rounded-[24px] p-3 sm:p-[18px] shadow-sm">
           <div className="flex flex-col lg:flex-row gap-[18px]">
             {/* LEFT CARD - Schedule (Largest) */}
-            <div className="w-full lg:w-[625px] flex-shrink-0 bg-white rounded-2xl border border-[#e5e7eb] p-6">
+            <div className="w-full lg:flex-1 lg:min-w-0 bg-white rounded-2xl border border-[#e5e7eb] p-4 sm:p-6">
               {/* Selected Option Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="pr-4">
@@ -302,7 +302,7 @@ export function EditItineraryinDetail({
                 <p className="text-sm text-[#364153]">
                   Total cost ({travelers} traveler{travelers === 1 ? "" : "s"})
                 </p>
-                <p className="text-[30px] font-semibold text-[#0a0a0a] leading-9">
+                <p className="text-2xl sm:text-[30px] font-semibold text-[#0a0a0a] leading-tight sm:leading-9">
                   {formatMoney(itinerary.total_cost)}
                 </p>
               </div>
@@ -475,7 +475,7 @@ export function EditItineraryinDetail({
             </div>
 
             {/* RIGHT COLUMN - 2 Separate Cards */}
-            <div className="w-full lg:w-[397px] flex flex-col gap-[18px]">
+            <div className="w-full lg:w-[397px] lg:flex-shrink-0 flex flex-col gap-[18px]">
               {/* RIGHT TOP CARD - Budget & Spend */}
 
               <div className="bg-[rgb(255,255,255)] backdrop-blur-sm border border-[#e5e7eb] rounded-xl p-6">

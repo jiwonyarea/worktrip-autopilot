@@ -106,7 +106,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-8">
-      <div className="max-w-2xl w-full">
+      <div className="max-w-2xl w-full px-4 sm:px-0">
         {/* Header */}
         <div className="text-center mb-12">
           <motion.div
@@ -129,7 +129,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
               )}
             </div>
           </motion.div>
-          <h1 className="text-4xl mb-3 text-[#0A0A0A]">{error ? "Planning failed" : "Autopilot is working on your trip"}</h1>
+          <h1 className="text-2xl sm:text-4xl mb-3 text-[#0A0A0A]">{error ? "Planning failed" : "Autopilot is working on your trip"}</h1>
           <p className="text-lg text-[#4A4A4A]">
             {error ? error : "I'm preparing a few in-policy itineraries for this trip"}
           </p>

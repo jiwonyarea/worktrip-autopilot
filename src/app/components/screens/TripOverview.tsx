@@ -581,7 +581,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                     {/* Expenses Table */}
                     <div className="bg-white border border-[#e5e7eb] rounded-lg overflow-hidden">
                       <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full min-w-[560px]">
                           <thead className="bg-[#f7f6f8] border-b border-[#e5e7eb]">
                             <tr>
                               <th className="text-left py-3 px-4 w-12">
