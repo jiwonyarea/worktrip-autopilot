@@ -139,8 +139,10 @@ export function useSpeechRecognition(options: {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
+    // console.log, not console.debug: Chrome files debug under "Verbose",
+    // which DevTools hides by default, so these were invisible when needed.
     const debug = (...args: unknown[]) => {
-      if (import.meta.env.DEV) console.debug("[speech]", ...args);
+      if (import.meta.env.DEV) console.log("%c[speech]", "color:#916AF5", ...args);
     };
 
     recognition.onstart = () => {
