@@ -8,6 +8,9 @@ import { Trip, DemoTrip, DemoCatalog, createTrip, updateTrip, parseIntentText, g
 import { motion } from "motion/react";
 import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
 import { formatDateRange } from "../../utils/itinerary";
+import { Calendar as CalendarPicker } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import type { DateRange } from "react-day-picker";
 import heroLogo from "../../../assets/brand/worktrip-autopilot-mark.svg";
 
 interface IntentCaptureProps {
@@ -88,6 +91,10 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
   const [quota, setQuota] = useState<DemoCatalog["live_generation"] | null>(null);
   const [loadingDemos, setLoadingDemos] = useState(true);
   const [detectedOrigin, setDetectedOrigin] = useState<DetectedLocation | null>(null);
+  // Anything the person fixes by hand in the details panel. Kept apart from the
+  // parse so a correction is never silently overwritten, and cleared whenever a
+  // fresh parse arrives — at that point their new wording is the intent.
+  const [overrides, setOverrides] = useState<Partial<ParsedFields>>({});
 
   // Resolve the departure city up front so people can say just a destination,
   // the way flight search sites behave. Failure is silent — the traveler can
@@ -178,6 +185,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
       try {
         const parsed = await parseIntentText(text);
         if (cancelled) return;
+        setOverrides({});
         setParsedFields({
           origin_city: parsed.origin_city || undefined,
           destination: parsed.destination_city || undefined,
@@ -214,12 +222,34 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
     }, 100);
   };
 
-  // Detection supplies the origin only when the traveler did not state one.
-  const effectiveOrigin = parsedFields?.origin_city || detectedOrigin?.city || "";
-  const originWasDetected = Boolean(!parsedFields?.origin_city && detectedOrigin?.city);
+  // Precedence: a hand-typed correction, then what the agent read, then the
+  // detected location.
+  const effectiveOrigin =
+    overrides.origin_city ?? parsedFields?.origin_city ?? detectedOrigin?.city ?? "";
+  const effectiveDestination = overrides.destination ?? parsedFields?.destination ?? "";
+  const effectiveDates = overrides.dates ?? parsedFields?.dates;
+  const effectiveTravelers =
+    overrides.travelers_count ?? parsedFields?.travelers_count ?? 1;
+
+  const originWasDetected = Boolean(
+    !overrides.origin_city && !parsedFields?.origin_city && detectedOrigin?.city,
+  );
 
   const isMissingCriticalFields =
-    parsedFields && (!parsedFields.destination || !parsedFields.dates || !effectiveOrigin);
+    parsedFields &&
+    (!effectiveDestination || !effectiveDates?.start_date || !effectiveDates?.end_date || !effectiveOrigin);
+
+  const dateRange: DateRange | undefined = effectiveDates?.start_date
+    ? {
+        from: new Date(`${effectiveDates.start_date}T00:00:00`),
+        to: effectiveDates.end_date
+          ? new Date(`${effectiveDates.end_date}T00:00:00`)
+          : undefined,
+      }
+    : undefined;
+
+  const toIso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   const handleSubmit = async () => {
     if (speech.listening) speech.stop();
@@ -228,8 +258,12 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
       toast.error("Tell me about the trip first");
       return;
     }
-    if (!parsedFields?.destination) {
+    if (!effectiveDestination) {
       toast.error("Which city is the trip to?");
+      return;
+    }
+    if (!effectiveDates?.start_date || !effectiveDates?.end_date) {
+      toast.error("Pick the travel dates");
       return;
     }
 
@@ -239,24 +273,25 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
       const trip = serverTrip
         ? await updateTrip(serverTrip.id, {
             intent_text: intent,
-            destination: parsedFields.destination,
+            destination: effectiveDestination,
             origin_city: originWasDetected
               ? [detectedOrigin?.city, detectedOrigin?.region].filter(Boolean).join(", ")
-              : parsedFields.origin_city,
-            start_date: parsedFields.dates?.start_date,
-            end_date: parsedFields.dates?.end_date,
+              : effectiveOrigin,
+            start_date: effectiveDates.start_date,
+            end_date: effectiveDates.end_date,
+            travelers_count: effectiveTravelers,
             trip_name: parsedFields.trip_name,
             purpose: parsedFields.purpose,
           })
         : await createTrip({
             intentText: intent,
-            destination: parsedFields.destination,
+            destination: effectiveDestination,
             origin_city: originWasDetected
               ? [detectedOrigin?.city, detectedOrigin?.region].filter(Boolean).join(", ")
-              : parsedFields.origin_city,
-            start_date: parsedFields.dates?.start_date,
-            end_date: parsedFields.dates?.end_date,
-            travelers_count: parsedFields.travelers_count,
+              : effectiveOrigin,
+            start_date: effectiveDates.start_date,
+            end_date: effectiveDates.end_date,
+            travelers_count: effectiveTravelers,
             trip_name: parsedFields.trip_name,
             purpose: parsedFields.purpose,
             organizer_name: "Sarah Chen",
@@ -394,7 +429,15 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                   ) : isMissingCriticalFields ? (
                     <>
                       <AlertCircle className="w-4 h-4 text-amber-600" />
-                      <span className="text-sm text-gray-700 font-medium">Missing required details</span>
+                      <span className="text-sm text-gray-700 font-medium">
+                        Add {[
+                          !effectiveOrigin && "a departure city",
+                          !effectiveDestination && "a destination",
+                          !effectiveDates?.start_date && "dates",
+                        ]
+                          .filter(Boolean)
+                          .join(", ")} below
+                      </span>
                     </>
                   ) : (
                     <>
@@ -405,54 +448,133 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                 </div>
               </div>
 
+              {/* Every field is editable. The agent gets people most of the way
+                  there; anything it could not read should be fixable here
+                  rather than sending them back to rewrite the sentence. */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#4a5565]" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-500 m-0">From</p>
-                    <p className="text-sm text-gray-900 m-0 flex items-center gap-1.5 flex-wrap">
-                      {effectiveOrigin || (
-                        <span className="text-amber-600">Not detected</span>
-                      )}
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-[#4a5565] mt-[22px] flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <label className="text-xs text-gray-500 m-0 flex items-center gap-1.5">
+                      From
                       {originWasDetected && (
-                        // Say where this came from, so an IP-based guess is
-                        // never mistaken for something the traveler said.
-                        <span className="text-[11px] text-[#916AF5] bg-[#EDE7FD] rounded-full px-2 py-0.5 whitespace-nowrap">
+                        <span className="text-[10px] text-[#916AF5] bg-[#EDE7FD] rounded-full px-1.5 py-0.5">
                           your location
                         </span>
                       )}
-                    </p>
+                    </label>
+                    <input
+                      value={effectiveOrigin}
+                      onChange={(e) =>
+                        setOverrides((o) => ({ ...o, origin_city: e.target.value }))
+                      }
+                      placeholder="Departure city"
+                      className={`w-full mt-0.5 bg-transparent text-sm text-gray-900 border-b outline-none pb-0.5 transition-colors placeholder:text-amber-600 ${
+                        effectiveOrigin
+                          ? "border-transparent hover:border-[#D8D3E5] focus:border-[#916AF5]"
+                          : "border-amber-400 focus:border-[#916AF5]"
+                      }`}
+                    />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#4a5565]" />
-                  <div>
-                    <p className="text-xs text-gray-500 m-0">Destination</p>
-                    <p className="text-sm text-gray-900 m-0">
-                      {parsedFields.destination || <span className="text-amber-600">Not detected</span>}
-                    </p>
+
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-[#4a5565] mt-[22px] flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <label className="text-xs text-gray-500 m-0">Destination</label>
+                    <input
+                      value={effectiveDestination}
+                      onChange={(e) =>
+                        setOverrides((o) => ({ ...o, destination: e.target.value }))
+                      }
+                      placeholder="Where to?"
+                      className={`w-full mt-0.5 bg-transparent text-sm text-gray-900 border-b outline-none pb-0.5 transition-colors placeholder:text-amber-600 ${
+                        effectiveDestination
+                          ? "border-transparent hover:border-[#D8D3E5] focus:border-[#916AF5]"
+                          : "border-amber-400 focus:border-[#916AF5]"
+                      }`}
+                    />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#4a5565]" />
-                  <div>
-                    <p className="text-xs text-gray-500 m-0">Dates</p>
-                    <p className="text-sm text-gray-900 m-0">
-                      {parsedFields.dates ? (
-                        formatDateRange(parsedFields.dates.start_date, parsedFields.dates.end_date)
-                      ) : (
-                        <span className="text-amber-600">Not detected</span>
-                      )}
-                    </p>
+
+                <div className="flex items-start gap-2">
+                  <Calendar className="w-4 h-4 text-[#4a5565] mt-[22px] flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <label className="text-xs text-gray-500 m-0">Dates</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={`w-full mt-0.5 text-left bg-transparent text-sm border-b outline-none pb-0.5 transition-colors ${
+                            effectiveDates?.start_date
+                              ? "text-gray-900 border-transparent hover:border-[#D8D3E5]"
+                              : "text-amber-600 border-amber-400"
+                          }`}
+                        >
+                          {effectiveDates?.start_date
+                            ? formatDateRange(effectiveDates.start_date, effectiveDates.end_date)
+                            : "Pick dates"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarPicker
+                          mode="range"
+                          selected={dateRange}
+                          defaultMonth={dateRange?.from}
+                          // Flight search only looks forward.
+                          disabled={{ before: new Date() }}
+                          onSelect={(range) =>
+                            setOverrides((o) => ({
+                              ...o,
+                              dates: {
+                                start_date: range?.from ? toIso(range.from) : undefined,
+                                end_date: range?.to ? toIso(range.to) : undefined,
+                              },
+                            }))
+                          }
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  <div>
-                    <p className="text-xs text-gray-500 m-0">Travelers</p>
-                    <p className="text-sm text-gray-900 m-0">
-                      {parsedFields.travelers_count ? `${parsedFields.travelers_count} traveler${parsedFields.travelers_count > 1 ? 's' : ''}` : '1 traveler'}
-                    </p>
+
+                <div className="flex items-start gap-2">
+                  <Users className="w-4 h-4 text-[#4a5565] mt-[22px] flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <label className="text-xs text-gray-500 m-0">Travelers</label>
+                    <div className="mt-0.5 flex items-center gap-3">
+                      <button
+                        type="button"
+                        aria-label="One fewer traveler"
+                        onClick={() =>
+                          setOverrides((o) => ({
+                            ...o,
+                            travelers_count: Math.max(effectiveTravelers - 1, 1),
+                          }))
+                        }
+                        disabled={effectiveTravelers <= 1}
+                        className="w-6 h-6 rounded-md border border-[#D8D3E5] text-[#916AF5] disabled:opacity-40 hover:bg-[#F2F1F8] transition-colors leading-none"
+                      >
+                        −
+                      </button>
+                      <span className="text-sm text-gray-900 tabular-nums">
+                        {effectiveTravelers} traveler{effectiveTravelers === 1 ? "" : "s"}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="One more traveler"
+                        onClick={() =>
+                          setOverrides((o) => ({
+                            ...o,
+                            travelers_count: Math.min(effectiveTravelers + 1, 9),
+                          }))
+                        }
+                        disabled={effectiveTravelers >= 9}
+                        className="w-6 h-6 rounded-md border border-[#D8D3E5] text-[#916AF5] disabled:opacity-40 hover:bg-[#F2F1F8] transition-colors leading-none"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
