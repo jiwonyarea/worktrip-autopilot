@@ -109,31 +109,32 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-8">
       <div className="w-full max-w-[700px] px-4 sm:px-0">
-        {/* Header */}
-        <div className="text-center mb-12">
+        {/* Header. The icon sits on its own — no card, no glow — and drifts
+            gently so it reads as the agent working rather than a static badge. */}
+        <div className="text-center mb-[50px]">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-6 shadow-xl relative"
+            className="inline-flex items-center justify-center mb-6"
           >
-            {/* Glow effect */}
-            <div className={`absolute inset-0 rounded-2xl blur-xl opacity-60 ${
-              error ? 'bg-[#FFE0E0]' : 'bg-[#D4E9FF]'
-            }`} />
-            <div className={`relative w-full h-full rounded-2xl flex items-center justify-center bg-white/70 backdrop-blur-xl border border-white/50 ${
-              error ? 'border-[#FF4D4D]/20' : 'border-[#1246A5]/20'
-            }`}>
-              {error ? (
-                <AlertCircle className="w-10 h-10 text-[#FF4D4D]" />
-              ) : (
-                <Sparkles className="w-10 h-10 text-[#1246A5] animate-pulse" />
-              )}
-            </div>
+            {error ? (
+              <AlertCircle className="w-12 h-12 text-[#FF4D4D]" />
+            ) : (
+              <motion.div
+                animate={{ scale: [1, 1.12, 1], rotate: [0, 8, 0, -8, 0] }}
+                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-12 h-12 text-[#916AF5] fill-[#916AF5]" />
+              </motion.div>
+            )}
           </motion.div>
-          <h1 className="text-2xl sm:text-4xl mb-3 text-[#0A0A0A]">{error ? "Planning failed" : "Autopilot is working on your trip"}</h1>
-          <p className="text-lg text-[#4A4A4A]">
-            {error ? error : "I'm preparing a few in-policy itineraries for this trip"}
+
+          <h1 className="font-display font-medium text-[28px] sm:text-[36px] leading-tight text-[#0A0A0A] m-0">
+            {error ? "Planning failed" : "Autopilot is working on your trip"}
+          </h1>
+          <p className="mt-3 text-[14px] font-normal text-[#4A4A4A] m-0">
+            {error ? error : "This may take a minute to offer best options..."}
           </p>
         </div>
 
@@ -162,18 +163,18 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
 
         {/* Planning steps as a horizontal timeline: five nodes on one track,
             filling left to right as each stage completes. */}
-        <div className="w-full max-w-[700px] mx-auto bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl px-8 py-10">
-          <div className="flex items-start">
+        <div className="w-full bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl p-[20px]">
+          <div className="flex items-start w-full">
             {planningSteps.map((step, index) => {
               const isComplete = currentStep > step.id;
               const isActive = currentStep === step.id;
 
               return (
-                <div key={step.id} className="flex-1 flex flex-col items-center relative">
+                <div key={step.id} className="flex-1 min-w-0 flex flex-col items-center relative">
                   {/* Connector back to the previous node. Drawn behind the
                       circles and coloured by whether that leg is done. */}
                   {index > 0 && (
-                    <div className="absolute top-[18px] right-1/2 left-[-50%] h-[2px] -z-0">
+                    <div className="absolute top-[17px] right-1/2 left-[-50%] h-[2px] -z-0">
                       <div className="w-full h-full bg-[#E5E7EB]" />
                       <motion.div
                         initial={{ scaleX: 0 }}
@@ -186,7 +187,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
                   )}
 
                   <div
-                    className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                    className={`relative z-10 w-[36px] h-[36px] rounded-full flex items-center justify-center transition-colors ${
                       isComplete
                         ? "bg-[#916AF5]"
                         : isActive
@@ -197,7 +198,23 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
                     {isComplete ? (
                       <Check className="w-4 h-4 text-white" strokeWidth={3} />
                     ) : isActive ? (
-                      <Loader2 className="w-4 h-4 text-[#916AF5] animate-spin" />
+                      // Three hopping dots read as "thinking" more warmly than
+                      // a spinner, which suggests waiting on a network call.
+                      <span className="flex items-end gap-[3px] h-3">
+                        {[0, 1, 2].map((dot) => (
+                          <motion.span
+                            key={dot}
+                            className="w-[4px] h-[4px] rounded-full bg-[#916AF5]"
+                            animate={{ y: [0, -4, 0] }}
+                            transition={{
+                              duration: 0.6,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                              delay: dot * 0.15,
+                            }}
+                          />
+                        ))}
+                      </span>
                     ) : (
                       <span className="text-[13px] leading-none">{step.icon}</span>
                     )}
@@ -205,7 +222,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
 
                   <p
                     className={`mt-3 px-1 text-[12px] leading-tight text-center m-0 transition-colors ${
-                      isComplete || isActive ? "text-[#1f2933] font-medium" : "text-[#9095a1]"
+                      isComplete || isActive ? "text-[#4a5565] font-medium" : "text-[#9095a1]"
                     }`}
                   >
                     {step.label}
@@ -232,13 +249,6 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
             />
           </div>
         )}
-
-        {/* Footer Note */}
-        <div className="bg-[#D4E9FF]/40 backdrop-blur-sm rounded-2xl border border-[#4A90E2]/20 p-4">
-          <p className="text-sm text-gray-700 text-center m-0">
-            ⏱️ This may take a minute as I search for the best options...
-          </p>
-        </div>
       </div>
     </div>
   );

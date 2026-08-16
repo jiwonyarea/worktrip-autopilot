@@ -191,6 +191,7 @@ export interface DemoTrip {
   travelers: number;
   option_count: number;
   status: string;
+  purpose: string;
 }
 
 export interface DemoCatalog {

@@ -664,6 +664,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                   startDate={demo.start_date}
                   endDate={demo.end_date}
                   travelers={demo.travelers}
+                  purpose={demo.purpose}
                   chip={
                     !hasEnded && daysAway !== null && daysAway >= 0 ? (
                       <span className="min-w-[40px] h-[22px] px-[8px] rounded-full bg-[#EEE9FD] border border-[#916AF5] text-[#916AF5] text-[11px] font-medium flex items-center justify-center flex-shrink-0">

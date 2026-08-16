@@ -133,6 +133,7 @@ api.get("/demo-trips", async (c) => {
         // Drives the card's secondary action: a booked trip is done and only
         // needs receipts filing; anything else is still editable.
         status: trip.status,
+        purpose: trip.purpose,
       };
     }),
   );
