@@ -72,6 +72,9 @@ export interface HotelOffer {
   totalPrice: number;
   currency: string;
   amenities: string[];
+  /** Used to compute a real distance rather than describing one vaguely. */
+  latitude: number | null;
+  longitude: number | null;
 }
 
 /** "2026-08-18 09:00" -> "09:00" */
@@ -197,6 +200,8 @@ export async function searchHotels(opts: {
       totalPrice: Number(p.total_rate?.extracted_lowest ?? 0),
       currency: "USD",
       amenities: (p.amenities ?? []).slice(0, 6),
+      latitude: p.gps_coordinates?.latitude ?? null,
+      longitude: p.gps_coordinates?.longitude ?? null,
     }))
     .filter((h: HotelOffer) => h.pricePerNight > 0 || h.totalPrice > 0)
     .sort((a: HotelOffer, b: HotelOffer) => a.pricePerNight - b.pricePerNight);

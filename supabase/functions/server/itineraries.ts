@@ -33,6 +33,23 @@ const DEFAULT_PREFERENCES = {
   explore_restaurants: false,
 };
 
+/** Great-circle distance in miles, so hotel proximity is measured, not guessed. */
+function milesBetween(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 3958.8;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export class GenerationError extends Error {
   constructor(
     message: string,
@@ -205,12 +222,31 @@ export async function searchInventory(tripId: string) {
     travelers: travelersWithPreferences,
     available_outbound_flights: flights.outboundOptions,
     available_return_flights: flights.returnOptions,
-    available_hotels: hotels.slice(0, 15),
+    available_hotels: hotels.slice(0, 15).map((h) => ({
+      ...h,
+      // Measured from the destination centre so the agent reports a real
+      // number instead of describing the location loosely.
+      distance_mi:
+        h.latitude != null && h.longitude != null
+          ? Number(
+              milesBetween(
+                h.latitude,
+                h.longitude,
+                airports.destination_center_lat,
+                airports.destination_center_lon,
+              ).toFixed(1),
+            )
+          : null,
+    })),
     inventory_notes: [
       "Each outbound option's roundTripPrice is the TOTAL round-trip fare for " +
         "all travelers combined. Use it as flight_cost directly; do not multiply " +
         "it by the traveler count.",
       "Pair each outbound option with one of the return options.",
+      "Copy hotel_rating from the chosen hotel's guestRating and " +
+        "hotel_distance_mi from its distance_mi. Do not estimate either.",
+      "Ground transport and food are company per-diems: report them once in " +
+        "the policy block, and use the same daily rate in every option.",
       hotels.length === 0
         ? "No hotel inventory came back for this city; estimate lodging and say so in the summary."
         : "Hotel prices are per room; multiply by rooms and nights as appropriate.",
@@ -269,7 +305,16 @@ export async function generateItineraries(tripId: string) {
     inventory = fresh.inventory;
   }
 
-  const options = await synthesizeItineraries(payload);
+  const { itineraries: options, policy } = await synthesizeItineraries(payload);
+
+  const nights = Math.max(
+    Math.round(
+      (Date.parse(trip.end_date ?? trip.inferred_dates?.end_date) -
+        Date.parse(trip.start_date ?? trip.inferred_dates?.start_date)) /
+        86_400_000,
+    ),
+    1,
+  );
 
   const itineraries = options.map((option, index) => ({
     id: `opt-${option.option_label ?? index}`,
@@ -285,16 +330,24 @@ export async function generateItineraries(tripId: string) {
       ? Math.round((option.total_cost / trip.total_budget) * 100)
       : 0,
     data_source: "serpapi",
+    details: {
+      ...option.details,
+      // Per-diems are policy, identical across options, so derive the per-option
+      // figures from the single policy rate rather than whatever varied.
+      ground_transport_cost: Math.round(policy.ground_transport_per_day * nights),
+      food_cost: Math.round(policy.food_per_day * nights),
+    },
   }));
 
   await kv.set(`trip:${tripId}`, {
     ...trip,
     itineraries,
+    policy_extras: { ...policy, nights },
     status: "awaiting_selection",
     updated_at: new Date().toISOString(),
   });
 
   console.log(`Generated ${itineraries.length} itineraries for ${tripId}`);
 
-  return { itineraries, inventory };
+  return { itineraries, policy: { ...policy, nights }, inventory };
 }

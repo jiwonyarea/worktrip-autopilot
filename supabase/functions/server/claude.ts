@@ -140,12 +140,22 @@ const AIRPORTS_SCHEMA = {
     },
     origin_confident: { type: "boolean" },
     destination_confident: { type: "boolean" },
+    destination_center_lat: {
+      type: "number",
+      description: "Latitude of the destination's downtown/city centre",
+    },
+    destination_center_lon: {
+      type: "number",
+      description: "Longitude of the destination's downtown/city centre",
+    },
   },
   required: [
     "origin_iata",
     "destination_iata",
     "origin_confident",
     "destination_confident",
+    "destination_center_lat",
+    "destination_center_lon",
   ],
   additionalProperties: false,
 } as const;
@@ -155,6 +165,8 @@ export interface ResolvedAirports {
   destination_iata: string;
   origin_confident: boolean;
   destination_confident: boolean;
+  destination_center_lat: number;
+  destination_center_lon: number;
 }
 
 /**
@@ -178,7 +190,8 @@ export function resolveAirports(
       "(e.g. 'North Fayette, Pennsylvania' is served by PIT). Set the " +
       "*_confident flag to false only if the place cannot be located at all " +
       "or has no reachable commercial airport — never guess a plausible " +
-      "looking code.",
+      "looking code. Also give the destination's downtown coordinates, used " +
+      "to measure how far each hotel actually is.",
     content: `Origin: ${originCity}\nDestination: ${destinationCity}`,
     schema: AIRPORTS_SCHEMA,
   });
@@ -188,13 +201,19 @@ export function resolveAirports(
 // Itinerary synthesis
 // ---------------------------------------------------------------------------
 
+export interface Highlight {
+  text: string;
+  type: "pro" | "con";
+}
+
 export interface ItineraryOption {
-  option_label: "balanced" | "premium" | "budget";
+  option_label: "balanced" | "time_saver" | "cost_saver";
   title: string;
   total_cost: number;
   policy_compliant: boolean;
   policy_note: string;
   features: string[];
+  highlights: Highlight[];
   rationale: string;
   details: {
     flight_summary: string;
@@ -204,6 +223,8 @@ export interface ItineraryOption {
     outbound_flight: string;
     return_flight: string;
     hotel_name: string;
+    hotel_rating: number;
+    hotel_distance_mi: number;
     flight_cost: number;
     hotel_cost: number;
     ground_transport_cost: number;
@@ -221,7 +242,7 @@ const ITINERARY_SCHEMA = {
       items: {
         type: "object",
         properties: {
-          option_label: { type: "string", enum: ["balanced", "premium", "budget"] },
+          option_label: { type: "string", enum: ["balanced", "time_saver", "cost_saver"] },
           title: { type: "string" },
           total_cost: { type: "number", description: "Total for ALL travelers, USD" },
           policy_compliant: { type: "boolean" },
@@ -237,6 +258,26 @@ const ITINERARY_SCHEMA = {
           rationale: {
             type: "string",
             description: "One or two sentences explaining why this option was assembled this way",
+          },
+          highlights: {
+            type: "array",
+            description:
+              "1-3 bullets, each under 10 words, specific to THIS option with real " +
+              "numbers. Never repeat a bullet across options and never state " +
+              "something true of all three.",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string" },
+                type: {
+                  type: "string",
+                  enum: ["pro", "con"],
+                  description: "pro: a real advantage over the others. con: the trade-off accepted.",
+                },
+              },
+              required: ["text", "type"],
+              additionalProperties: false,
+            },
           },
           details: {
             type: "object",
@@ -254,6 +295,14 @@ const ITINERARY_SCHEMA = {
                 description: "Same format as outbound_flight",
               },
               hotel_name: { type: "string" },
+              hotel_rating: {
+                type: "number",
+                description: "Guest rating out of 5 as given in the inventory; 0 if unrated",
+              },
+              hotel_distance_mi: {
+                type: "number",
+                description: "Miles from the destination centre, as given in the inventory",
+              },
               flight_cost: { type: "number", description: "All travelers, USD" },
               hotel_cost: { type: "number", description: "All travelers, all nights, USD" },
               ground_transport_cost: { type: "number" },
@@ -268,6 +317,8 @@ const ITINERARY_SCHEMA = {
               "outbound_flight",
               "return_flight",
               "hotel_name",
+              "hotel_rating",
+              "hotel_distance_mi",
               "flight_cost",
               "hotel_cost",
               "ground_transport_cost",
@@ -284,21 +335,50 @@ const ITINERARY_SCHEMA = {
           "policy_compliant",
           "policy_note",
           "features",
+          "highlights",
           "rationale",
           "details",
         ],
         additionalProperties: false,
       },
     },
+    policy: {
+      type: "object",
+      description:
+        "Per-diems apply to every option equally — they are company policy, " +
+        "not a difference between the three.",
+      properties: {
+        ground_transport_per_day: { type: "number" },
+        food_per_day: { type: "number" },
+        rationale: {
+          type: "string",
+          description:
+            "2-3 sentences for a 'Why these options?' note: the policy limits " +
+            "applied, what was prioritised, and anything that constrained the " +
+            "search. Written to the organiser.",
+        },
+      },
+      required: ["ground_transport_per_day", "food_per_day", "rationale"],
+      additionalProperties: false,
+    },
   },
-  required: ["itineraries"],
+  required: ["itineraries", "policy"],
   additionalProperties: false,
 } as const;
 
+export interface PolicyExtras {
+  ground_transport_per_day: number;
+  food_per_day: number;
+  rationale: string;
+}
+
 export async function synthesizeItineraries(
   payload: unknown,
-): Promise<ItineraryOption[]> {
-  const result = await structured<{ itineraries: ItineraryOption[] }>({
+): Promise<{ itineraries: ItineraryOption[]; policy: PolicyExtras }> {
+  const result = await structured<{
+    itineraries: ItineraryOption[];
+    policy: PolicyExtras;
+  }>({
     effort: "medium",
     maxTokens: 16000,
     system:
@@ -326,7 +406,7 @@ export async function synthesizeItineraries(
     schema: ITINERARY_SCHEMA,
   });
 
-  return result.itineraries;
+  return { itineraries: result.itineraries, policy: result.policy };
 }
 
 // ---------------------------------------------------------------------------

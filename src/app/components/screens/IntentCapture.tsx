@@ -21,6 +21,8 @@ interface IntentCaptureProps {
   onOpenDemoTrip?: (tripId: string) => void;
   /** Jump straight to a finished trip's expenses to file receipts. */
   onOpenTripExpenses?: (tripId: string) => void;
+  /** Restores the wording behind an existing trip when editing it. */
+  initialIntent?: string;
 }
 
 // Parsed fields interface
@@ -81,8 +83,8 @@ const INTENT_SUGGESTIONS = [
   },
 ];
 
-export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenTripExpenses }: IntentCaptureProps) {
-  const [intent, setIntent] = useState("");
+export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenTripExpenses, initialIntent }: IntentCaptureProps) {
+  const [intent, setIntent] = useState(initialIntent ?? "");
   const [isCreating, setIsCreating] = useState(false);
   const [serverTrip, setServerTrip] = useState<Trip | null>(null);
   const [parsedFields, setParsedFields] = useState<ParsedFields | null>(null);

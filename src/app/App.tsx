@@ -35,6 +35,9 @@ export default function App() {
   // Expenses is reachable from the trip overview and from a finished trip on
   // the home screen, so Back has to return to wherever it was opened from.
   const [expensesReturnTo, setExpensesReturnTo] = useState<Screen>("trip-overview");
+  // The wording that produced the current trip, so Edit returns to it rather
+  // than an empty box.
+  const [intentDraft, setIntentDraft] = useState("");
 
   // Check URL parameters on mount for traveler survey access
   useEffect(() => {
@@ -60,6 +63,12 @@ export default function App() {
     }
   }, []);
 
+  // Edit on the options screen goes back to the prompt that produced them.
+  const handleEditTrip = () => {
+    setIntentDraft(currentTrip?.intent_text ?? intentDraft);
+    setCurrentScreen("intent-capture");
+  };
+
   // A finished trip's remaining task is filing receipts, so send it there.
   const handleOpenTripExpenses = (demoTripId: string) => {
     setCurrentTripId(demoTripId);
@@ -83,6 +92,7 @@ export default function App() {
   const handleStartPlanning = async (tripId: string, trip: Trip) => {
     setCurrentTripId(tripId);
     setCurrentTrip(trip);
+    setIntentDraft(trip.intent_text ?? "");
     setCurrentScreen("agent-working-simple");
   };
 
@@ -138,6 +148,7 @@ export default function App() {
           <IntentCapture
             onStartPlanning={handleStartPlanning}
             tripId={currentTripId}
+            initialIntent={intentDraft}
             onOpenDemoTrip={handleOpenDemoTrip}
             onOpenTripExpenses={handleOpenTripExpenses}
           />
@@ -158,6 +169,7 @@ export default function App() {
             onApprove={handleApproveAndBook}
             onEditItinerary={handleSelectOption}
             onBack={handleReviewApproveBack}
+            onEditTrip={handleEditTrip}
           />
         );
       
