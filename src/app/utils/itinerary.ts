@@ -149,3 +149,33 @@ export function pickItinerary(trip: any, selectedId?: string | null): any | null
 export function travelerCount(trip: any): number {
   return trip?.travelers?.length || trip?.inferred_travelers_count || 1;
 }
+
+const MONTHS_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/**
+ * Compact date range: "September 4-8, 2026". Repeating the month and year on
+ * both ends reads as noise, so only the parts that actually differ are shown.
+ */
+export function formatDateRange(start?: string | null, end?: string | null): string {
+  const parse = (iso?: string | null) => {
+    if (!iso) return null;
+    const [y, m, d] = iso.split("-").map(Number);
+    return y && m && d ? { y, m, d } : null;
+  };
+
+  const a = parse(start);
+  const b = parse(end);
+  if (!a) return "";
+  if (!b) return `${MONTHS_LONG[a.m - 1]} ${a.d}, ${a.y}`;
+
+  if (a.y === b.y && a.m === b.m) {
+    return `${MONTHS_LONG[a.m - 1]} ${a.d}-${b.d}, ${a.y}`;
+  }
+  if (a.y === b.y) {
+    return `${MONTHS_LONG[a.m - 1]} ${a.d} - ${MONTHS_LONG[b.m - 1]} ${b.d}, ${a.y}`;
+  }
+  return `${MONTHS_LONG[a.m - 1]} ${a.d}, ${a.y} - ${MONTHS_LONG[b.m - 1]} ${b.d}, ${b.y}`;
+}

@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/colla
 import { Trip, DemoTrip, DemoCatalog, createTrip, updateTrip, parseIntentText, getDemoCatalog, detectLocation, DetectedLocation } from "../../utils/tripApi";
 import { motion } from "motion/react";
 import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
+import { formatDateRange } from "../../utils/itinerary";
 import heroLogo from "../../../assets/brand/worktrip-autopilot-mark.svg";
 
 interface IntentCaptureProps {
@@ -27,15 +28,6 @@ interface ParsedFields {
   travelers_count?: number;
   trip_name?: string;
   purpose?: string;
-}
-
-// Helper function to format date string without timezone conversion
-function formatDateString(dateStr: string, format: 'short' | 'long' = 'short'): string {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const monthNames = format === 'short' 
-    ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${monthNames[month - 1]} ${day}, ${year}`;
 }
 
 // Suggestion cards. Dates are generated relative to today rather than written
@@ -301,7 +293,10 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
 
         {/* Main Search Bar */}
         <div className="max-w-[710px] mx-auto mb-6">
-          <div className="relative bg-white/80 backdrop-blur-xl rounded-[57px] ring-[6px] ring-white/50 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
+          {/* The stroke is a wrapper rather than a border or ring, so the field
+              and its outline are one shape and the shadow wraps both. */}
+          <div className="bg-white/50 rounded-[57px] p-[6px] shadow-[0px_-4px_24px_rgba(0,0,0,0.06)]">
+          <div className="relative bg-white/80 backdrop-blur-xl rounded-[51px] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
             <input
               ref={inputRef}
               value={displayedIntent}
@@ -314,7 +309,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                   ? "Listening — start describing the trip…"
                   : "Tell me about your next trip"
               }
-              className="flex-1 bg-transparent border-none outline-none text-[#717182] text-[14px] tracking-[-0.15px] placeholder:text-[#717182] min-w-0"
+              className="flex-1 bg-transparent border-none outline-none text-[#717182] text-[16px] tracking-[-0.15px] placeholder:text-[#717182] min-w-0"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -360,6 +355,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                 <MicOff className="w-5 h-5" />
               </span>
             )}
+          </div>
           </div>
         </div>
 
@@ -441,7 +437,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                     <p className="text-xs text-gray-500 m-0">Dates</p>
                     <p className="text-sm text-gray-900 m-0">
                       {parsedFields.dates ? (
-                        `${formatDateString(parsedFields.dates.start_date)} – ${formatDateString(parsedFields.dates.end_date)}`
+                        formatDateRange(parsedFields.dates.start_date, parsedFields.dates.end_date)
                       ) : (
                         <span className="text-amber-600">Not detected</span>
                       )}
@@ -491,7 +487,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
               key={index}
               onClick={() => handleSuggestionClick(suggestion.text)}
               title={suggestion.text}
-              className="bg-white/60 backdrop-blur-sm border border-white/50 rounded-full shadow-sm hover:shadow-md hover:bg-white/80 transition-all w-full sm:w-[280px] h-[40px] px-[18px] py-[10px] flex items-center gap-2 text-left"
+              className="bg-white/60 backdrop-blur-sm border border-[#D8D3E5] rounded-full hover:bg-white/80 transition-all w-full sm:w-[280px] h-[40px] px-[18px] py-[10px] flex items-center gap-2 text-left"
             >
               <Sparkles className="w-[18px] h-[18px] text-[#916AF5] flex-shrink-0" />
               <span className="text-[12px] font-normal text-[#4a5565] truncate">
@@ -535,27 +531,27 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
               return (
                 <div
                   key={demo.trip_id}
-                  className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.06)] w-full h-[90px] px-6 flex items-center justify-between gap-4"
+                  className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.06)] w-full h-[90px] p-[18px] flex items-center justify-between gap-4"
                 >
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 mb-[9px]">
                       <h3 className="text-[16px] font-semibold text-[#1f2933] m-0 truncate">
                         {demo.label}
                       </h3>
                       {daysAway !== null && daysAway >= 0 && (
-                        <span className="text-[11px] text-[#916AF5] border border-[#916AF5]/40 rounded-full px-2 py-0.5 flex-shrink-0">
+                        <span className="min-w-[40px] h-[22px] px-[8px] rounded-full bg-[#EEE9FD] border border-[#916AF5] text-[#916AF5] text-[11px] font-medium flex items-center justify-center flex-shrink-0">
                           D-{daysAway}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 text-[12px] text-[#4a5565] flex-wrap">
+                    <div className="flex items-center gap-4 text-[14px] font-normal text-[#4a5565] flex-wrap">
                       <span className="flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5" />
                         {demo.destination}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5" />
-                        {formatDateString(demo.start_date)} – {formatDateString(demo.end_date)}
+                        {formatDateRange(demo.start_date, demo.end_date)}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Users className="w-3.5 h-3.5" />
@@ -567,7 +563,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                      className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-white/70 text-[#1f2933] text-[14px] font-medium hover:bg-white transition-colors"
+                      className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
                     >
                       View
                     </button>
@@ -582,7 +578,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                     ) : (
                       <button
                         onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                        className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-white/70 text-[#1f2933] text-[14px] font-medium hover:bg-white transition-colors"
+                        className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
                       >
                         Edit
                       </button>
