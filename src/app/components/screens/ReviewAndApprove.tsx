@@ -207,7 +207,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
       className="min-h-screen relative bg-cover bg-center bg-no-repeat pb-16"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="relative z-10 max-w-[1088px] mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
+      <div className="relative z-10 max-w-[1088px] mx-auto px-4 sm:px-6 pt-[60px]">
         {/* Header */}
         <div className="flex items-start gap-3 mb-6">
           <Sparkles
@@ -259,8 +259,6 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
             const bookable = (d.flight_cost || 0) + (d.hotel_cost || 0);
             const outbound = parseFlight(d.outbound_flight);
             const inbound = parseFlight(d.return_flight);
-            const inPolicy = option.policy_compliant !== false;
-
             return (
               <div
                 key={option.id}
@@ -268,24 +266,13 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
               >
                 {/* Direction, then price. The direction is what this page asks
                     the organiser to choose between. */}
-                <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="mb-3">
                   <div className="min-w-0">
                     <h3 className="text-[16px] font-semibold text-[#1f2933] m-0">
                       {LABELS[option.option_label] ?? option.title}
                     </h3>
                     <p className="text-[24px] font-semibold text-[#101828] m-0 leading-[32px]">
                       {formatMoney(bookable)}
-                    </p>
-                    <p className="text-[12px] text-[#9095a1] m-0">flights + hotel</p>
-                  </div>
-                  <div
-                    className={`${inPolicy ? "bg-[#d0f4e0]" : "bg-[#ffe9cc]"} px-3 py-1 rounded-full flex-shrink-0`}
-                    title={option.policy_note}
-                  >
-                    <p
-                      className={`text-[12px] font-medium m-0 leading-[16px] ${inPolicy ? "text-[#44ad33]" : "text-[#b45309]"}`}
-                    >
-                      {inPolicy ? "In policy" : "Review"}
                     </p>
                   </div>
                 </div>
@@ -309,7 +296,15 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
                       className="bg-[rgba(179,173,196,0.11)] border border-[rgba(179,173,196,0.28)] rounded-[16px] p-3"
                     >
                       {leg ? (
-                        <>
+                        <div className="flex items-center gap-3">
+                          <div className="bg-white rounded-[8px] w-10 h-10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <img
+                              src={getAirlineLogo(raw)}
+                              alt={leg.airline}
+                              className="w-[30px] h-[30px] object-contain"
+                            />
+                          </div>
+                          <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <p className="text-[14px] font-bold text-[#101828] m-0 leading-[20px]">
                               {leg.departTime} - {leg.arriveTime}
@@ -324,7 +319,8 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
                               ? "Direct"
                               : `${leg.stops} stop${leg.stops > 1 ? "s" : ""}`}
                           </p>
-                        </>
+                          </div>
+                        </div>
                       ) : (
                         <p className="text-[14px] text-[#364153] m-0">{raw || "Flight pending"}</p>
                       )}
@@ -387,7 +383,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
 
                 <button
                   onClick={() => handleSwitchOption(option.id)}
-                  className="mt-auto w-full h-[44px] rounded-[8px] bg-[#E9E7EF] text-[#1f2933] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+                  className="mt-auto w-full h-[44px] rounded-[8px] bg-[#E9E7EF] text-[#1f2933] text-[18px] font-normal hover:bg-[#ddd0ff] transition-colors"
                 >
                   Continue
                 </button>

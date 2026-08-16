@@ -262,9 +262,20 @@ const ITINERARY_SCHEMA = {
           highlights: {
             type: "array",
             description:
-              "1-3 bullets, each under 10 words, specific to THIS option with real " +
-              "numbers. Never repeat a bullet across options and never state " +
-              "something true of all three.",
+              "1-3 bullets, each under 10 words, specific to THIS option.\n" +
+              "The card already shows: price, airline, flight number, departure " +
+              "and arrival times, stop count, hotel name, star rating, distance, " +
+              "and nights. A bullet that only restates one of those is wasted — " +
+              "every bullet must add something the card cannot show, by tying a " +
+              "detail to a traveler preference or to a practical consequence.\n" +
+              "Good: 'Arrives 16:01, matches afternoon arrival preference' — it " +
+              "reads a number the card shows and says what it means.\n" +
+              "Good: '4am wake-up for the return connection'.\n" +
+              "Bad: '$376 cheaper than time saver' (price is on the card).\n" +
+              "Bad: 'Hotel rated 4.1' (rating is on the card).\n" +
+              "Bad: '0.5 miles from downtown' (distance is on the card).\n" +
+              "Never repeat a bullet across options, and never state something " +
+              "true of all three.",
             items: {
               type: "object",
               properties: {
