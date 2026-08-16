@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, MapPin, Calendar, Users, Briefcase, Plane, Hotel, Car, Utensils, Loader2 } from "lucide-react";
+import { ChevronLeft, MapPin, Calendar, Users, Briefcase, Plane, Hotel, Car, Utensils, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import imgImageAirline from "figma:asset/50ba81ee3baed0d032549253a352c5d27d54adb9.png";
 import imgImageHotel from "figma:asset/3a7194d0c070824d982b80f6a329057d5ed3025a.png";
@@ -70,19 +70,16 @@ function FlightCard({ flight, raw }: { flight: ParsedFlight | null; raw?: string
           </div>
         </div>
 
+        {/* Baggage allowance is not in the flight data we get back, so stating
+            "x1 checked bag" here would be inventing a booking detail. Cabin
+            class is real, so show that instead. */}
         <div className="hidden sm:flex flex-col items-end text-[10px] text-[#6a7282] gap-1 flex-shrink-0">
-          <div className="flex items-center gap-1">
-            <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
-              <rect x="3" y="2" width="6" height="7" rx="1" stroke="currentColor" strokeWidth="1"/>
-            </svg>
-            <span>x1 Checked bag</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
-              <rect x="3" y="2" width="6" height="7" rx="1" stroke="currentColor" strokeWidth="1"/>
-            </svg>
-            <span>x1 Carry-on bag</span>
-          </div>
+          <span className="capitalize">{"Economy"}</span>
+          <span>
+            {flight.stops === 0
+              ? "Nonstop"
+              : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`}
+          </span>
         </div>
       </div>
       <p className="text-xs text-[#6a7282]">{carrierLine}</p>
@@ -189,11 +186,24 @@ export function EditItineraryinDetail({
   const inbound = parseFlight(details.return_flight);
   const inPolicy = itinerary.policy_compliant !== false;
 
+  // The organiser chose a direction on the previous screen; name it here so
+  // the two screens agree on what was picked.
+  const DIRECTIONS: Record<string, string> = {
+    balanced: "Balanced",
+    time_saver: "Time Saver",
+    cost_saver: "Cost Saver",
+  };
+  const directionLabel = DIRECTIONS[itinerary.option_label] ?? itinerary.title;
+
+  // Per-diems are policy, shared by every option.
+  const policyExtras = (trip as any).policy_extras;
+
   // Features are the agent's reasons for this option; fall back to its rationale.
-  const highlights: string[] =
-    itinerary.features?.length > 0
-      ? itinerary.features
-      : [itinerary.rationale].filter(Boolean);
+  // Same bullets the option card showed, so the choice carries forward.
+  const highlights: { text: string; type: string }[] =
+    itinerary.highlights?.length > 0
+      ? itinerary.highlights
+      : (itinerary.features ?? []).map((f: string) => ({ text: f, type: "pro" }));
 
   return (
     <div
@@ -201,20 +211,17 @@ export function EditItineraryinDetail({
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Main Content - Max Width 1088px */}
-      <div className="relative max-w-[1088px] mx-auto px-4 sm:px-6 pt-6 sm:pt-8 z-10">
-        {/* Header Section */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-gradient-to-b from-[#916af5] to-[#b2a5fb] rounded-2xl shadow-md w-12 h-12 flex items-center justify-center flex-shrink-0">
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-            </svg>
-          </div>
+      <div className="relative max-w-[1088px] mx-auto px-4 sm:px-6 pt-[60px] z-10">
+        {/* Header — same shape as the selection screen, so the two read as one
+            flow rather than two different products. */}
+        <div className="flex items-start gap-3 mb-6">
+          <Sparkles className="w-10 h-10 text-[#916AF5] fill-[#916AF5] flex-shrink-0" aria-hidden />
           <div>
-            <h1 className="text-xl font-semibold text-[#0a0a0a]">
-              Edit and confirm your itinerary
+            <h1 className="font-display font-medium text-[20px] leading-tight text-[#0a0a0a] m-0">
+              Edit and finalize your itinerary
             </h1>
-            <p className="text-base text-[#4a5565]">
-              Confirm your itinerary
+            <p className="text-[14px] font-normal text-[#4a5565] m-0 mt-1">
+              Adjust your trip itinerary in detail before booking
             </p>
           </div>
         </div>
@@ -273,26 +280,13 @@ export function EditItineraryinDetail({
             {/* LEFT CARD - Schedule (Largest) */}
             <div className="w-full lg:flex-1 lg:min-w-0 bg-white rounded-2xl border border-[#e5e7eb] p-4 sm:p-6">
               {/* Selected Option Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="pr-4">
+              <div className="mb-4">
+                <div>
                   <h3 className="text-base font-semibold text-[#1f2933] mb-1">
-                    {itinerary.title}
+                    {directionLabel}
                   </h3>
                   <p className="text-sm text-[#4a5565]">
                     {itinerary.rationale || details.flight_summary}
-                  </p>
-                </div>
-                <div
-                  className={`${
-                    inPolicy ? "bg-[#d0f4e0]" : "bg-[#ffe9cc]"
-                  } px-3 py-1 rounded-full flex-shrink-0`}
-                >
-                  <p
-                    className={`text-[12px] font-medium m-0 leading-[16px] font-['Inter:Medium',sans-serif] ${
-                      inPolicy ? "text-[#44ad33]" : "text-[#b45309]"
-                    }`}
-                  >
-                    {inPolicy ? "In policy" : "Over budget"}
                   </p>
                 </div>
               </div>
@@ -367,7 +361,17 @@ export function EditItineraryinDetail({
                           {details.hotel_name}
                         </p>
                         <p className="text-xs text-[#6a7282] mb-1">
-                          📍 {trip.destination}
+                          {details.hotel_rating > 0 && <>{details.hotel_rating}★ · </>}
+                          {details.hotel_distance_mi > 0 && (
+                            <>
+                              {details.hotel_distance_mi} mi to{" "}
+                              {trip.purpose?.toLowerCase().includes("conference")
+                                ? "venue"
+                                : "downtown"}{" "}
+                              ·{" "}
+                            </>
+                          )}
+                          {trip.destination}
                         </p>
                         <p className="text-xs text-[#6a7282]">
                           {details.hotel_summary}
@@ -398,7 +402,9 @@ export function EditItineraryinDetail({
                     <span className="text-base text-[#1f2933]">Ground Transport</span>
                   </div>
                   <p className="text-sm text-[#6a7282] ml-7">
-                    {details.ground_transport_summary}
+                    {policyExtras
+                      ? `${formatMoney(policyExtras.ground_transport_per_day)}/day × ${nights} days = ${formatMoney(details.ground_transport_cost)}`
+                      : details.ground_transport_summary}
                   </p>
                 </div>
 
@@ -409,7 +415,9 @@ export function EditItineraryinDetail({
                     <span className="text-base text-[#1f2933]">Food</span>
                   </div>
                   <p className="text-sm text-[#6a7282] ml-7">
-                    {details.food_summary}
+                    {policyExtras
+                      ? `${formatMoney(policyExtras.food_per_day)}/day × ${nights} days = ${formatMoney(details.food_cost)}`
+                      : details.food_summary}
                   </p>
                 </div>
               </div>
@@ -447,12 +455,18 @@ export function EditItineraryinDetail({
               {/* Why the agent built it this way */}
               <div className="mb-6">
                 <div className="space-y-2">
-                  {highlights.map((point: string, index: number) => (
+                  {highlights.map((point, index: number) => (
                     <div key={index} className="flex items-start gap-2 text-sm text-[#4a5565]">
-                      <svg className="w-4 h-4 text-[#52c93f] flex-shrink-0 mt-0.5" viewBox="0 0 16 16" fill="none">
-                        <path d="M13.3 4L6 11.3 2.7 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      <span>{point}</span>
+                      {point.type === "con" ? (
+                        <svg className="w-4 h-4 text-[#b45309] flex-shrink-0 mt-0.5" viewBox="0 0 16 16" fill="none">
+                          <path d="M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-[#52c93f] flex-shrink-0 mt-0.5" viewBox="0 0 16 16" fill="none">
+                          <path d="M13.3 4L6 11.3 2.7 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                      <span>{point.text}</span>
                     </div>
                   ))}
                 </div>

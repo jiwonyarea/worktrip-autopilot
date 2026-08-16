@@ -428,8 +428,9 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
                       {formatMoney(perDay * nights)}
                     </p>
                   </div>
-                  <p className="text-[18px] font-semibold text-[#101828] m-0 whitespace-nowrap">
-                    {formatMoney(perDay)} <span className="text-[12px] font-normal text-[#9095a1]">{unit}</span>
+                  <p className="text-[18px] font-normal text-[#0a0a0a] m-0 whitespace-nowrap">
+                    {formatMoney(perDay)}{" "}
+                    <span className="text-[12px] font-normal text-[#9095a1]">{unit}</span>
                   </p>
                 </div>
               ))}
