@@ -43,7 +43,17 @@ export class GenerationError extends Error {
   }
 }
 
-export async function generateItineraries(tripId: string) {
+const INVENTORY_TTL_MS = 15 * 60 * 1000;
+
+/**
+ * Phase one: work out where the trip goes and pull real inventory for it.
+ *
+ * Split out from generation so the planning screen can report genuine
+ * progress — searching takes ~15s and synthesis ~30s, and a single call
+ * gives the interface nothing to report in between. The result is cached so
+ * phase two does not pay for the searches again.
+ */
+export async function searchInventory(tripId: string) {
   if (!claudeConfigured()) {
     throw new GenerationError(
       "The planning agent is not configured. Set ANTHROPIC_API_KEY on the edge function.",
@@ -227,6 +237,38 @@ export async function generateItineraries(tripId: string) {
   };
   console.log("Inventory:", JSON.stringify(inventory));
 
+  await kv.set(`inventory:${tripId}`, { at: Date.now(), payload, inventory });
+
+  return { inventory };
+}
+
+/**
+ * Phase two: hand the inventory to the agent and persist the three options.
+ * Reuses whatever phase one cached; falls back to searching itself so a
+ * direct call still works.
+ */
+export async function generateItineraries(tripId: string) {
+  if (!claudeConfigured()) {
+    throw new GenerationError(
+      "The planning agent is not configured. Set ANTHROPIC_API_KEY on the edge function.",
+      503,
+    );
+  }
+
+  const trip = await kv.get(`trip:${tripId}`);
+  if (!trip) throw new GenerationError("Trip not found", 404);
+
+  const cached = await kv.get(`inventory:${tripId}`).catch(() => null);
+  let payload = cached && Date.now() - cached.at < INVENTORY_TTL_MS ? cached.payload : null;
+  let inventory = cached?.inventory ?? null;
+
+  if (!payload) {
+    await searchInventory(tripId);
+    const fresh = await kv.get(`inventory:${tripId}`);
+    payload = fresh.payload;
+    inventory = fresh.inventory;
+  }
+
   const options = await synthesizeItineraries(payload);
 
   const itineraries = options.map((option, index) => ({
@@ -252,10 +294,7 @@ export async function generateItineraries(tripId: string) {
     updated_at: new Date().toISOString(),
   });
 
-  console.log(
-    `Generated ${itineraries.length} itineraries for ${tripId} ` +
-      `(${originCode}->${destinationCode}, ${flights.outboundOptions.length} outbound options, ${hotels.length} hotels)`,
-  );
+  console.log(`Generated ${itineraries.length} itineraries for ${tripId}`);
 
   return { itineraries, inventory };
 }

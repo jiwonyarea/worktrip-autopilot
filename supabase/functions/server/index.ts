@@ -10,7 +10,7 @@ import { logger } from "npm:hono@4/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 import * as kv from "./kv_store.ts";
-import { generateItineraries, GenerationError } from "./itineraries.ts";
+import { generateItineraries, searchInventory, GenerationError } from "./itineraries.ts";
 import {
   claudeConfigured,
   extractReceipt,
@@ -405,11 +405,10 @@ api.get("/trips/:tripId/preferences", async (c) => {
 // Itinerary generation + booking
 // ---------------------------------------------------------------------------
 
-api.post("/trips/:tripId/generate-itineraries", async (c) => {
+// Phase one. The SerpApi searches are spent here, so this is what the daily
+// demo quota counts.
+api.post("/trips/:tripId/search-inventory", async (c) => {
   try {
-    // Live generation costs travel-API searches and model tokens, so the public
-    // demo gets a daily cap. Visitors who hit it are pointed at the free
-    // pre-generated trips instead.
     const bypass = hasBypass(c.req.raw);
     if (!bypass) {
       const quota = await checkRateLimit();
@@ -429,10 +428,27 @@ api.post("/trips/:tripId/generate-itineraries", async (c) => {
       }
     }
 
-    const result = await generateItineraries(c.req.param("tripId"));
-    // Only count generations that actually produced itineraries.
+    const result = await searchInventory(c.req.param("tripId"));
     if (!bypass) await recordGeneration();
     return c.json(result);
+  } catch (error) {
+    if (error instanceof GenerationError) {
+      console.warn(`search-inventory: ${error.message}`);
+      return c.json({ error: error.message, ...error.extra }, error.status);
+    }
+    console.error("search-inventory failed:", error);
+    return c.json(
+      { error: "Could not search flights and hotels", details: String(error) },
+      500,
+    );
+  }
+});
+
+api.post("/trips/:tripId/generate-itineraries", async (c) => {
+  try {
+    // The quota is charged in search-inventory, where the searches are
+    // actually spent, so a normal two-call run is counted once.
+    return c.json(await generateItineraries(c.req.param("tripId")));
   } catch (error) {
     if (error instanceof GenerationError) {
       console.warn(`generate-itineraries: ${error.message}`);

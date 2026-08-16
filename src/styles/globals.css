@@ -270,3 +270,15 @@ body {
 .font-display {
   font-family: var(--font-display);
 }
+
+/* Anyone who has asked the OS to reduce motion should not be given a pulsing
+   icon and a breathing progress dot. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

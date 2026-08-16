@@ -1,7 +1,7 @@
 import { Check, Loader2, Sparkles, AlertCircle, MessagesSquare, Plane, Hotel, ClipboardList, Layers } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
-import { Trip, getTrip, generateItineraries } from "../../utils/tripApi";
+import { Trip, getTrip, generateItineraries, searchInventory, InventorySummary } from "../../utils/tripApi";
 import { TripSummaryCard } from "../TripSummaryCard";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
@@ -28,6 +28,11 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
+  // What the search actually turned up, shown as it arrives.
+  const [inventory, setInventory] = useState<InventorySummary | null>(null);
+  // Motion loops are JS-driven, so the CSS reduced-motion rule cannot reach
+  // them — they have to opt out here.
+  const reduceMotion = useReducedMotion();
 
   // Fetch trip data on mount if not provided
   useEffect(() => {
@@ -59,22 +64,29 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
 
     setIsGenerating(true);
     setError(null);
+    setInventory(null);
 
     try {
+      // Phase one: reading the trip is instant, so step 1 is already behind us.
+      setCurrentStep(1);
+      const { inventory: found } = await searchInventory(trip.id);
+      setInventory(found);
+
+      // Searching is done; the agent now has something to reason about.
+      setCurrentStep(3);
+
+      // Phase two. Step 5 stays active until this resolves, however long it
+      // takes — the tracker must never claim to be finished before the work is.
+      setCurrentStep(4);
       await generateItineraries(trip.id);
-      // On success, wait a moment and then complete
-      setTimeout(() => {
-        onComplete();
-      }, 500);
+      setCurrentStep(planningSteps.length + 1);
+
+      setTimeout(() => onComplete(), 400);
     } catch (err) {
-      // Show what actually went wrong. Advancing to the next screen on failure
-      // just turns a specific, fixable error into "No itineraries available".
       console.error("Itinerary generation failed:", err);
       setError(
         err instanceof Error ? err.message : "Could not build itineraries for this trip",
       );
-      // A spent daily quota is not a failure of this trip — send people to the
-      // pre-generated ones rather than a retry that cannot succeed today.
       setRateLimited(Boolean((err as { rate_limited?: boolean })?.rate_limited));
       setIsGenerating(false);
     }
@@ -87,26 +99,21 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
     }
   }, [trip?.id]);
 
-  // Animate progress steps while generating
+  // Each phase covers more than one displayed step, so nudge to the second
+  // step of a phase after a moment. This never advances past what the API has
+  // actually confirmed — the phase handlers own those transitions.
   useEffect(() => {
     if (!isGenerating) return;
 
-    const stepDurations = [1500, 2000, 2000, 1500, 1500];
     const timers: NodeJS.Timeout[] = [];
-    let cumulativeDelay = 0;
-
-    planningSteps.forEach((step, index) => {
-      cumulativeDelay += stepDurations[index];
-      const timer = setTimeout(() => {
-        setCurrentStep(index + 1);
-      }, cumulativeDelay);
-      timers.push(timer);
-    });
-
-    return () => {
-      timers.forEach(timer => clearTimeout(timer));
-    };
-  }, [isGenerating]);
+    if (currentStep === 1) {
+      timers.push(setTimeout(() => setCurrentStep((s) => (s === 1 ? 2 : s)), 900));
+    }
+    if (currentStep === 4) {
+      timers.push(setTimeout(() => setCurrentStep((s) => (s === 4 ? 5 : s)), 4000));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [isGenerating, currentStep]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-8">
@@ -124,7 +131,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
               <AlertCircle className="w-12 h-12 text-[#FF4D4D]" />
             ) : (
               <motion.div
-                animate={{ scale: [1, 1.12, 1], rotate: [0, 8, 0, -8, 0] }}
+                animate={reduceMotion ? undefined : { scale: [1, 1.12, 1], rotate: [0, 8, 0, -8, 0] }}
                 transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
               >
                 <Sparkles className="w-12 h-12 text-[#916AF5] fill-[#916AF5]" />
@@ -204,7 +211,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
                       // spinner, and it reads as a pulse rather than waiting.
                       <motion.span
                         className="w-[10px] h-[10px] rounded-full bg-[#916AF5]"
-                        animate={{ scale: [1, 1.55, 1], opacity: [0.85, 1, 0.85] }}
+                        animate={reduceMotion ? undefined : { scale: [1, 1.55, 1], opacity: [0.85, 1, 0.85] }}
                         transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
                       />
                     ) : (
@@ -224,6 +231,46 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
             })}
           </div>
         </div>
+
+        {/* What the search actually returned. Turns the wait into evidence the
+            agent is doing real work rather than a decorative loader. */}
+        {inventory && !error && (
+          <motion.p
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center text-[14px] text-[#4a5565] m-0 mt-1"
+          >
+            Found{" "}
+            <span className="font-medium text-[#1f2933]">
+              {inventory.outbound_options} flight option
+              {inventory.outbound_options === 1 ? "" : "s"}
+            </span>
+            {inventory.hotels > 0 && (
+              <>
+                {" and "}
+                <span className="font-medium text-[#1f2933]">
+                  {inventory.hotels} hotel{inventory.hotels === 1 ? "" : "s"}
+                </span>
+                {inventory.hotel_price_low > 0 && (
+                  <span className="text-[#9095a1]">
+                    {" "}· ${inventory.hotel_price_low}–${inventory.hotel_price_high}/night
+                  </span>
+                )}
+              </>
+            )}
+          </motion.p>
+        )}
+
+        {/* Announce step changes to assistive tech, which cannot see the track. */}
+        <p className="sr-only" aria-live="polite">
+          {error
+            ? `Planning failed: ${error}`
+            : currentStep > planningSteps.length
+              ? "Planning complete"
+              : `Step ${currentStep} of ${planningSteps.length}: ${
+                  planningSteps[Math.max(currentStep - 1, 0)]?.label ?? ""
+                }`}
+        </p>
 
         {/* Planning for — same trip card as the home screen, minus actions. */}
         {trip && (

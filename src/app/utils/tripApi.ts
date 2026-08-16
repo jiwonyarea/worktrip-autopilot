@@ -228,3 +228,27 @@ export interface DetectedLocation {
 export async function detectLocation(): Promise<DetectedLocation> {
   return apiFetch<DetectedLocation>('/detect-location');
 }
+
+export interface InventorySummary {
+  outbound_options: number;
+  return_options: number;
+  hotels: number;
+  flight_price_low: number;
+  flight_price_high: number;
+  distinct_flight_prices: number[];
+  hotel_price_low: number;
+  hotel_price_high: number;
+}
+
+/**
+ * Phase one of planning: resolve the route and search real flights and hotels.
+ * Returns what was found so the planning screen can report actual progress
+ * instead of guessing. Takes roughly 7s.
+ */
+export async function searchInventory(
+  tripId: string,
+): Promise<{ inventory: InventorySummary }> {
+  return apiFetch<{ inventory: InventorySummary }>(`/trips/${tripId}/search-inventory`, {
+    method: 'POST',
+  });
+}
