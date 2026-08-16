@@ -1,4 +1,4 @@
-import { Check, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { Check, Loader2, Sparkles, AlertCircle, MessagesSquare, Plane, Hotel, ClipboardList, Layers } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Trip, getTrip, generateItineraries } from "../../utils/tripApi";
@@ -11,12 +11,14 @@ interface AgentWorkingSimpleProps {
   tripData?: Trip | null;
 }
 
+// Icons are the same lucide set the itinerary screens use, all stroked at the
+// same weight so the row reads as one family rather than mixed artwork.
 const planningSteps = [
-  { id: 1, label: "Collecting preferences", icon: "📋" },
-  { id: 2, label: "Searching flights", icon: "✈️" },
-  { id: 3, label: "Finding hotels", icon: "🏨" },
-  { id: 4, label: "Checking policy", icon: "🛡️" },
-  { id: 5, label: "Combining options", icon: "🔄" },
+  { id: 1, label: "Collecting preferences", Icon: MessagesSquare },
+  { id: 2, label: "Searching flights", Icon: Plane },
+  { id: 3, label: "Finding hotels", Icon: Hotel },
+  { id: 4, label: "Checking policy", Icon: ClipboardList },
+  { id: 5, label: "Combining options", Icon: Layers },
 ];
 
 export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleProps) {
@@ -163,7 +165,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
 
         {/* Planning steps as a horizontal timeline: five nodes on one track,
             filling left to right as each stage completes. */}
-        <div className="w-full bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl p-[20px]">
+        <div className="w-full p-[20px]">
           <div className="flex items-start w-full">
             {planningSteps.map((step, index) => {
               const isComplete = currentStep > step.id;
@@ -196,27 +198,17 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
                     }`}
                   >
                     {isComplete ? (
-                      <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                      <Check className="w-[18px] h-[18px] text-white" strokeWidth={1.75} />
                     ) : isActive ? (
-                      // Three hopping dots read as "thinking" more warmly than
-                      // a spinner, which suggests waiting on a network call.
-                      <span className="flex items-end gap-[3px] h-3">
-                        {[0, 1, 2].map((dot) => (
-                          <motion.span
-                            key={dot}
-                            className="w-[4px] h-[4px] rounded-full bg-[#916AF5]"
-                            animate={{ y: [0, -4, 0] }}
-                            transition={{
-                              duration: 0.6,
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                              delay: dot * 0.15,
-                            }}
-                          />
-                        ))}
-                      </span>
+                      // A single dot breathing in place — quieter than a
+                      // spinner, and it reads as a pulse rather than waiting.
+                      <motion.span
+                        className="w-[10px] h-[10px] rounded-full bg-[#916AF5]"
+                        animate={{ scale: [1, 1.55, 1], opacity: [0.85, 1, 0.85] }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+                      />
                     ) : (
-                      <span className="text-[13px] leading-none">{step.icon}</span>
+                      <step.Icon className="w-[18px] h-[18px] text-[#9095a1]" strokeWidth={1.75} />
                     )}
                   </div>
 

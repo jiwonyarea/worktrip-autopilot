@@ -624,7 +624,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
 
         {/* Recent Trips. These are the pre-generated demo trips, so opening
             one costs nothing and works even when the daily quota is spent. */}
-        <div className="max-w-[700px] mx-auto">
+        <div className="max-w-[800px] mx-auto">
           <div className="flex items-baseline justify-between gap-4 mb-[14px]">
             <h2 className="text-[14px] font-semibold text-[#1f2933] m-0">Recent Trips</h2>
             {quota && !quota.available && (
