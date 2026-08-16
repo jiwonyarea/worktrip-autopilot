@@ -5,6 +5,7 @@ import imgImageAirline from "figma:asset/50ba81ee3baed0d032549253a352c5d27d54adb
 import imgImageHotel from "figma:asset/3a7194d0c070824d982b80f6a329057d5ed3025a.png";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
 import { Trip, getTrip, confirmBooking } from "../../utils/tripApi";
+import { TripSummaryCard } from "../TripSummaryCard";
 import {
   parseFlight,
   flightDuration,
@@ -184,7 +185,39 @@ export function EditItineraryinDetail({
   const nights = nightsBetween(trip.start_date, trip.end_date);
   const outbound = parseFlight(details.outbound_flight);
   const inbound = parseFlight(details.return_flight);
-  const inPolicy = itinerary.policy_compliant !== false;
+  // Three states rather than a boolean: editing a flight or hotel can move a
+  // trip from compliant to needing a look without putting it out of policy.
+  const COMPLIANCE = {
+    compliant: {
+      line: "Your trip is fully compliant with policy",
+      chip: "In policy",
+      text: "text-[#1F9D55]",
+      chipClass: "bg-[#d1f4e0] text-[#52c93f]",
+      bar: "bg-gradient-to-r from-[#52c93f] to-[#18a0a6]",
+    },
+    review_required: {
+      line: "Your trip requires a review",
+      chip: "Review",
+      text: "text-[#b45309]",
+      chipClass: "bg-[#ffe9cc] text-[#b45309]",
+      bar: "bg-gradient-to-r from-[#f5a623] to-[#f5a623]",
+    },
+    out_of_policy: {
+      line: "Out of compliance with company policy",
+      chip: "Action needed",
+      text: "text-[#c02626]",
+      chipClass: "bg-[#ffe0e0] text-[#c02626]",
+      bar: "bg-gradient-to-r from-[#f5a623] to-[#e5484d]",
+    },
+  } as const;
+
+  const complianceState: keyof typeof COMPLIANCE =
+    itinerary.compliance && itinerary.compliance in COMPLIANCE
+      ? itinerary.compliance
+      : itinerary.policy_compliant === false
+        ? "out_of_policy"
+        : "compliant";
+  const compliance = COMPLIANCE[complianceState];
 
   // The organiser chose a direction on the previous screen; name it here so
   // the two screens agree on what was picked.
@@ -235,47 +268,29 @@ export function EditItineraryinDetail({
           Back to options
         </button>
 
-        {/* Trip Header Card */}
-
-        <div className="bg-white rounded-2xl shadow-sm mb-6 p-[20px] px-[22px] py-[20px]">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-3 mb-3">
-                <h3 className="text-base font-semibold text-[#1f2933]">
-                  {trip.trip_name}
-                </h3>
-                <div className="bg-[#D4E9FF] rounded-full px-3 py-1 flex items-center justify-center">
-                  <span className="font-['Inter:Medium',sans-serif] font-medium text-[12px] leading-[16px] text-[#1246A5]">
-                    {trip.status}
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#4a5565]">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4" />
-                  <span>{trip.destination}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4" />
-                  <span>{trip.start_date} - {trip.end_date}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4" />
-                  <span>{travelers} traveler{travelers === 1 ? "" : "s"}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Briefcase className="w-4 h-4" />
-                  <span>{trip.purpose}</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
+        {/* Same trip card as every other screen, with a way back to the
+            wording that produced it. */}
+        <TripSummaryCard
+          className="mb-6"
+          name={trip.trip_name || trip.inferred_trip_name || "Work Trip"}
+          destination={trip.destination || trip.inferred_destination}
+          startDate={trip.start_date || trip.inferred_dates?.start_date}
+          endDate={trip.end_date || trip.inferred_dates?.end_date}
+          travelers={travelers}
+          purpose={trip.purpose}
+          actions={
+            <button
+              onClick={onBack}
+              className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+            >
+              Edit
+            </button>
+          }
+        />
 
         {/* Main Content - 3 Separate Cards */}
         {/* White Container Card */}
-        <div className="bg-[#ffffff] rounded-[24px] p-3 sm:p-[18px] shadow-sm">
+        <div className="bg-white/90 rounded-[24px] p-3 sm:p-[18px] shadow-sm">
           <div className="flex flex-col lg:flex-row gap-[18px]">
             {/* LEFT CARD - Schedule (Largest) */}
             <div className="w-full lg:flex-1 lg:min-w-0 bg-white rounded-2xl border border-[#e5e7eb] p-4 sm:p-6">
@@ -286,7 +301,7 @@ export function EditItineraryinDetail({
                     {directionLabel}
                   </h3>
                   <p className="text-sm text-[#4a5565]">
-                    {itinerary.rationale || details.flight_summary}
+                    {itinerary.summary || itinerary.title}
                   </p>
                 </div>
               </div>
@@ -310,8 +325,10 @@ export function EditItineraryinDetail({
                 {/* Outbound flight */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Plane className="w-5 h-5 text-[#4a5565]" />
+                    <div className="flex items-center gap-2 relative">
+                      {/* rail continues down to the hotel node */}
+                      <span className="absolute left-[9px] top-[26px] bottom-[-22px] w-px bg-[#D8D3E5]" aria-hidden />
+                      <Plane className="w-5 h-5 text-[#4a5565] relative z-10 bg-white" strokeWidth={1.75} />
                       <span className="text-base text-[#1f2933]">Flight to {trip.destination}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -332,8 +349,9 @@ export function EditItineraryinDetail({
                 {/* Hotel Stay */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Hotel className="w-5 h-5 text-[#4a5565]" />
+                    <div className="flex items-center gap-2 relative">
+                      <span className="absolute left-[9px] top-[26px] bottom-[-22px] w-px bg-[#D8D3E5]" aria-hidden />
+                      <Hotel className="w-5 h-5 text-[#4a5565] relative z-10 bg-white" strokeWidth={1.75} />
                       <span className="text-base text-[#1f2933]">
                         {nights}-night stay in {trip.destination}
                       </span>
@@ -397,8 +415,9 @@ export function EditItineraryinDetail({
 
                 {/* Ground Transport */}
                 <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Car className="w-5 h-5 text-[#4a5565]" />
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    <span className="absolute left-[9px] top-[26px] bottom-[-18px] w-px bg-[#D8D3E5]" aria-hidden />
+                    <Car className="w-5 h-5 text-[#4a5565] relative z-10 bg-white" strokeWidth={1.75} />
                     <span className="text-base text-[#1f2933]">Ground Transport</span>
                   </div>
                   <p className="text-sm text-[#6a7282] ml-7">
@@ -410,8 +429,9 @@ export function EditItineraryinDetail({
 
                 {/* Food */}
                 <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Utensils className="w-5 h-5 text-[#4a5565]" />
+                  <div className="flex items-center gap-2 mb-2 relative">
+                    {/* last node — no rail below it */}
+                    <Utensils className="w-5 h-5 text-[#4a5565] relative z-10 bg-white" strokeWidth={1.75} />
                     <span className="text-base text-[#1f2933]">Food</span>
                   </div>
                   <p className="text-sm text-[#6a7282] ml-7">
@@ -431,7 +451,7 @@ export function EditItineraryinDetail({
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Plane className="w-5 h-5 text-[#4a5565]" />
+                      <Plane className="w-5 h-5 text-[#4a5565]" strokeWidth={1.75} />
                       <span className="text-base text-[#1f2933]">
                         Flight to {trip.origin_city || "home"}
                       </span>
@@ -509,11 +529,7 @@ export function EditItineraryinDetail({
                         {/* Progress bar */}
                         <div className="w-full h-2.5 bg-[rgba(3,2,19,0.2)] rounded-full mb-2 overflow-hidden">
                           <div
-                            className={`h-full ${
-                              inPolicy
-                                ? "bg-gradient-to-r from-[#52c93f] to-[#18a0a6]"
-                                : "bg-gradient-to-r from-[#f5a623] to-[#e5484d]"
-                            }`}
+                            className={`h-full ${compliance.bar}`}
                             style={{
                               width: `${Math.min(
                                 trip.total_budget
@@ -526,20 +542,13 @@ export function EditItineraryinDetail({
                         </div>
 
                         <div className="flex items-center justify-between gap-3 mb-4">
-                          <span className={`text-xs ${inPolicy ? "text-[#1F9D55]" : "text-[#b45309]"}`}>
-                            {itinerary.policy_note ||
-                              (inPolicy
-                                ? "Your trip is fully compliant with policy"
-                                : "This option exceeds the stated budget")}
+                          <span className={`text-xs ${compliance.text}`} title={itinerary.policy_note}>
+                            {compliance.line}
                           </span>
                           <div
-                            className={`${
-                              inPolicy
-                                ? "bg-[#d1f4e0] text-[#52c93f]"
-                                : "bg-[#ffe9cc] text-[#b45309]"
-                            } rounded-full px-3 py-1 text-xs font-medium flex-shrink-0`}
+                            className={`${compliance.chipClass} rounded-full px-3 py-1 text-xs font-medium flex-shrink-0`}
                           >
-                            {inPolicy ? "In policy" : "Review"}
+                            {compliance.chip}
                           </div>
                         </div>
 

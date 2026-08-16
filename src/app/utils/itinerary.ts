@@ -21,6 +21,8 @@ export interface FlightSegment {
 
 export interface ParsedFlight {
   segments: FlightSegment[];
+  /** Connecting airports, e.g. ["ATL"] for "PIT to AUS via ATL". */
+  via: string[];
   /** First segment's origin and last segment's destination. */
   from: string;
   to: string;
@@ -67,15 +69,24 @@ export function parseFlight(raw?: string | null): ParsedFlight | null {
   const first = segments[0];
   const last = segments[segments.length - 1];
 
+  // Connections arrive in two shapes: separate segments joined by ", then",
+  // or a single segment reading "PIT to AUS via ATL". Counting only the first
+  // reported a connecting flight as nonstop.
+  const viaMatch = raw.match(/\bvia\s+([A-Z]{3}(?:\s*[,/&]\s*[A-Z]{3})*)/i);
+  const via = viaMatch
+    ? viaMatch[1].split(/[,/&]/).map((code) => code.trim().toUpperCase()).filter(Boolean)
+    : [];
+
   return {
     segments,
+    via,
     from: first.from,
     to: last.to,
     departTime: first.departTime,
     arriveTime: last.arriveTime,
     airline: first.airline,
     flightNumber: first.flightNumber,
-    stops: segments.length - 1,
+    stops: Math.max(segments.length - 1, via.length),
     raw,
   };
 }

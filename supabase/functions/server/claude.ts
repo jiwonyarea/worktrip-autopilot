@@ -206,9 +206,13 @@ export interface Highlight {
   type: "pro" | "con";
 }
 
+export type ComplianceState = "compliant" | "review_required" | "out_of_policy";
+
 export interface ItineraryOption {
   option_label: "balanced" | "time_saver" | "cost_saver";
   title: string;
+  summary: string;
+  compliance: ComplianceState;
   total_cost: number;
   policy_compliant: boolean;
   policy_note: string;
@@ -244,6 +248,21 @@ const ITINERARY_SCHEMA = {
         properties: {
           option_label: { type: "string", enum: ["balanced", "time_saver", "cost_saver"] },
           title: { type: "string" },
+          summary: {
+            type: "string",
+            description:
+              "ONE sentence, under 15 words, on what this option optimises for " +
+              "and what that costs. Shown directly under the option name, so it " +
+              "must stand alone — no paragraphs.",
+          },
+          compliance: {
+            type: "string",
+            enum: ["compliant", "review_required", "out_of_policy"],
+            description:
+              "compliant: within every stated limit. review_required: inside " +
+              "the limits but close enough to warrant a look, or a limit was " +
+              "not stated. out_of_policy: exceeds a stated limit.",
+          },
           total_cost: { type: "number", description: "Total for ALL travelers, USD" },
           policy_compliant: { type: "boolean" },
           policy_note: {
@@ -342,6 +361,8 @@ const ITINERARY_SCHEMA = {
         required: [
           "option_label",
           "title",
+          "summary",
+          "compliance",
           "total_cost",
           "policy_compliant",
           "policy_note",
