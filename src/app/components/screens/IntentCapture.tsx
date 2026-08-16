@@ -8,6 +8,7 @@ import { Trip, DemoTrip, DemoCatalog, createTrip, updateTrip, parseIntentText, g
 import { motion } from "motion/react";
 import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
 import { formatDateRange } from "../../utils/itinerary";
+import { TripSummaryCard } from "../TripSummaryCard";
 import { Calendar as CalendarPicker } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import type { DateRange } from "react-day-picker";
@@ -655,61 +656,47 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
               const daysAway = daysUntil(demo.start_date);
               const hasEnded = (daysUntil(demo.end_date) ?? 0) < 0;
               return (
-                <div
+                <TripSummaryCard
                   key={demo.trip_id}
-                  className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.06)] w-full h-[90px] p-[18px] flex items-center justify-between gap-4"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-[9px]">
-                      <h3 className="text-[16px] font-semibold text-[#1f2933] m-0 truncate">
-                        {demo.label}
-                      </h3>
-                      {!hasEnded && daysAway !== null && daysAway >= 0 && (
-                        <span className="min-w-[40px] h-[22px] px-[8px] rounded-full bg-[#EEE9FD] border border-[#916AF5] text-[#916AF5] text-[11px] font-medium flex items-center justify-center flex-shrink-0">
-                          D-{daysAway}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-[14px] font-normal text-[#4a5565] flex-wrap">
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5" />
-                        {demo.destination}
+                  className="h-[90px]"
+                  name={demo.label}
+                  destination={demo.destination}
+                  startDate={demo.start_date}
+                  endDate={demo.end_date}
+                  travelers={demo.travelers}
+                  chip={
+                    !hasEnded && daysAway !== null && daysAway >= 0 ? (
+                      <span className="min-w-[40px] h-[22px] px-[8px] rounded-full bg-[#EEE9FD] border border-[#916AF5] text-[#916AF5] text-[11px] font-medium flex items-center justify-center flex-shrink-0">
+                        D-{daysAway}
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {formatDateRange(demo.start_date, demo.end_date)}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
-                        {demo.travelers} traveler{demo.travelers === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                      className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
-                    >
-                      View
-                    </button>
-                    {hasEnded ? (
-                      <button
-                        onClick={() => onOpenTripExpenses?.(demo.trip_id)}
-                        className="min-w-[54px] h-[28px] px-3 rounded-[8px] bg-[#916AF5] text-white text-[14px] font-medium hover:bg-[#7c5dd4] transition-colors whitespace-nowrap"
-                      >
-                        Upload Receipt
-                      </button>
-                    ) : (
+                    ) : undefined
+                  }
+                  actions={
+                    <>
                       <button
                         onClick={() => onOpenDemoTrip?.(demo.trip_id)}
                         className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
                       >
-                        Edit
+                        View
                       </button>
-                    )}
-                  </div>
-                </div>
+                      {hasEnded ? (
+                        <button
+                          onClick={() => onOpenTripExpenses?.(demo.trip_id)}
+                          className="min-w-[54px] h-[28px] px-3 rounded-[8px] bg-[#916AF5] text-white text-[14px] font-medium hover:bg-[#7c5dd4] transition-colors whitespace-nowrap"
+                        >
+                          Upload Receipt
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onOpenDemoTrip?.(demo.trip_id)}
+                          className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </>
+                  }
+                />
               );
             })}
           </div>

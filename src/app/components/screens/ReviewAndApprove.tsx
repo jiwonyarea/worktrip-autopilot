@@ -11,6 +11,7 @@ import {
   ChevronLeft
 } from "lucide-react";
 import { Trip, getTrip } from "../../utils/tripApi";
+import { TripSummaryCard } from "../TripSummaryCard";
 import svgPaths from "../../imports/svg-26i6mfklc7";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
@@ -209,48 +210,17 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, tripId }:
           <span>Back to search</span>
         </button>
 
-        {/* Trip Header Card */}
-        <div className="bg-white rounded-[24px] border-[1.8px] border-[rgba(138,116,195,0.32)] shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.15)] p-6 mb-6 w-full">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="font-['Inter:Semi_Bold',sans-serif] font-semibold text-[16px] leading-[24px] tracking-[-0.3125px] text-[#1f2933] m-0">
-                  {trip.trip_name || trip.inferred_trip_name}
-                </h3>
-                
-                <div className="bg-[#D4E9FF] rounded-full px-3 py-1 flex items-center justify-center">
-                  <span className="font-['Inter:Medium',sans-serif] font-medium text-[12px] leading-[16px] text-[#1246A5]">
-                    awaiting_selection
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-4 text-[14px] text-[#4a5565]">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  <span className="font-['Inter:Regular',sans-serif]">{trip.destination || trip.inferred_destination}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span className="font-['Inter:Regular',sans-serif]">
-                    {trip.start_date || trip.inferred_dates?.start_date} - {trip.end_date || trip.inferred_dates?.end_date}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  <span className="font-['Inter:Regular',sans-serif]">
-                    {trip.travelers?.length || 1} traveler
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Briefcase className="w-4 h-4" />
-                  <span className="font-['Inter:Regular',sans-serif]">{trip.purpose}</span>
-                </div>
-              </div>
-            </div>
-            
-          </div>
-        </div>
-
+        {/* Trip Header Card — the same card as the home and planning screens,
+            just wider here, so the trip reads identically across the flow. */}
+        <TripSummaryCard
+          className="mb-6"
+          name={trip.trip_name || trip.inferred_trip_name || "Work Trip"}
+          destination={trip.destination || trip.inferred_destination}
+          startDate={trip.start_date || trip.inferred_dates?.start_date}
+          endDate={trip.end_date || trip.inferred_dates?.end_date}
+          travelers={trip.travelers?.length || 1}
+          purpose={trip.purpose}
+        />
         {/* Three Column Layout - All Same Size with 12px gap */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
           {sortedItineraries.map((option: any, index: number) => {

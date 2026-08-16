@@ -2,6 +2,7 @@ import { Check, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Trip, getTrip, generateItineraries } from "../../utils/tripApi";
+import { TripSummaryCard } from "../TripSummaryCard";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 
@@ -14,7 +15,8 @@ const planningSteps = [
   { id: 1, label: "Collecting preferences", icon: "📋" },
   { id: 2, label: "Searching flights", icon: "✈️" },
   { id: 3, label: "Finding hotels", icon: "🏨" },
-  { id: 4, label: "Combining options", icon: "🔄" }
+  { id: 4, label: "Checking policy", icon: "🛡️" },
+  { id: 5, label: "Combining options", icon: "🔄" },
 ];
 
 export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleProps) {
@@ -87,7 +89,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
   useEffect(() => {
     if (!isGenerating) return;
 
-    const stepDurations = [1500, 2000, 2000, 1500];
+    const stepDurations = [1500, 2000, 2000, 1500, 1500];
     const timers: NodeJS.Timeout[] = [];
     let cumulativeDelay = 0;
 
@@ -106,7 +108,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-8">
-      <div className="max-w-2xl w-full px-4 sm:px-0">
+      <div className="w-full max-w-[700px] px-4 sm:px-0">
         {/* Header */}
         <div className="text-center mb-12">
           <motion.div
@@ -158,83 +160,76 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
           </div>
         )}
 
-        {/* Planning Steps - Main Frosted Card */}
-        <div className="bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl p-8 mb-6">
-          <div className="space-y-6">
+        {/* Planning steps as a horizontal timeline: five nodes on one track,
+            filling left to right as each stage completes. */}
+        <div className="w-full max-w-[700px] mx-auto bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl px-8 py-10">
+          <div className="flex items-start">
             {planningSteps.map((step, index) => {
               const isComplete = currentStep > step.id;
               const isActive = currentStep === step.id;
-              const isPending = currentStep < step.id;
 
               return (
-                <motion.div
-                  key={step.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.2 }}
-                  className="flex items-center gap-4"
-                >
-                  {/* Step Icon */}
-                  <div className={`
-                    w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-md
-                    ${isComplete ? 'bg-[#D1F4E0]' : isActive ? 'bg-[#D4E9FF]' : 'bg-white/50 backdrop-blur-sm'}
-                  `}>
-                    {isComplete ? (
-                      <Check className="w-6 h-6 text-[#52C93F]" />
-                    ) : isActive ? (
-                      <Loader2 className="w-6 h-6 text-[#4A90E2] animate-spin" />
-                    ) : (
-                      <span className="text-2xl">{step.icon}</span>
-                    )}
-                  </div>
-
-                  {/* Step Content */}
-                  <div className="flex-1">
-                    <p className={`
-                      text-base m-0 transition-all
-                      ${isComplete ? 'text-[#0A0A0A]' : isActive ? 'text-[#0A0A0A]' : 'text-gray-400'}
-                    `}>
-                      {step.label}
-                    </p>
-                    {isActive && (
+                <div key={step.id} className="flex-1 flex flex-col items-center relative">
+                  {/* Connector back to the previous node. Drawn behind the
+                      circles and coloured by whether that leg is done. */}
+                  {index > 0 && (
+                    <div className="absolute top-[18px] right-1/2 left-[-50%] h-[2px] -z-0">
+                      <div className="w-full h-full bg-[#E5E7EB]" />
                       <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: "100%" }}
-                        transition={{ duration: 2 }}
-                        className="h-1 bg-gradient-to-r from-[#1246A5] to-[#18A0A6] rounded-full mt-2"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: currentStep >= step.id ? 1 : 0 }}
+                        transition={{ duration: 0.5 }}
+                        style={{ transformOrigin: "left" }}
+                        className="w-full h-full bg-[#916AF5] -mt-[2px]"
                       />
+                    </div>
+                  )}
+
+                  <div
+                    className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                      isComplete
+                        ? "bg-[#916AF5]"
+                        : isActive
+                          ? "bg-[#EEE9FD] border-2 border-[#916AF5]"
+                          : "bg-white border-2 border-[#E5E7EB]"
+                    }`}
+                  >
+                    {isComplete ? (
+                      <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                    ) : isActive ? (
+                      <Loader2 className="w-4 h-4 text-[#916AF5] animate-spin" />
+                    ) : (
+                      <span className="text-[13px] leading-none">{step.icon}</span>
                     )}
                   </div>
 
-                  {/* Status Indicator */}
-                  {isComplete && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="text-sm text-[#52C93F] px-3 py-1 bg-[#D1F4E0]/50 rounded-full"
-                    >
-                      Done
-                    </motion.span>
-                  )}
-                </motion.div>
+                  <p
+                    className={`mt-3 px-1 text-[12px] leading-tight text-center m-0 transition-colors ${
+                      isComplete || isActive ? "text-[#1f2933] font-medium" : "text-[#9095a1]"
+                    }`}
+                  >
+                    {step.label}
+                  </p>
+                </div>
               );
             })}
           </div>
         </div>
 
-        {/* Context Info */}
+        {/* Planning for — same trip card as the home screen, minus actions. */}
         {trip && (
-          <div className="bg-white/50 backdrop-blur-sm rounded-2xl border border-white/30 p-5 mb-4">
-            <p className="text-sm text-gray-600 m-0 mb-2">Planning for:</p>
-            <div className="space-y-1">
-              <p className="text-sm m-0"><strong>{trip.trip_name || trip.inferred_trip_name}</strong></p>
-              <p className="text-sm text-gray-700 m-0">
-                {trip.destination || trip.inferred_destination} · {trip.start_date || trip.inferred_dates?.start_date} – {trip.end_date || trip.inferred_dates?.end_date}
-              </p>
-              <p className="text-sm text-gray-700 m-0">
-                {trip.travelers?.length || 0} traveler{trip.travelers?.length !== 1 ? 's' : ''}
-              </p>
-            </div>
+          <div className="w-full max-w-[700px] mx-auto mt-6">
+            <h2 className="text-[14px] font-semibold text-[#1f2933] m-0 mb-[14px]">
+              Planning for
+            </h2>
+            <TripSummaryCard
+              name={trip.trip_name || trip.inferred_trip_name || "Work Trip"}
+              destination={trip.destination || trip.inferred_destination}
+              startDate={trip.start_date || trip.inferred_dates?.start_date}
+              endDate={trip.end_date || trip.inferred_dates?.end_date}
+              travelers={trip.travelers?.length || 1}
+              purpose={trip.purpose}
+            />
           </div>
         )}
 
