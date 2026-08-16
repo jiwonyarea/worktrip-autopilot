@@ -32,6 +32,9 @@ export default function App() {
   // Which of the three options the organizer picked. Drives every screen
   // after Review & Approve.
   const [selectedItineraryId, setSelectedItineraryId] = useState<string | null>(null);
+  // Expenses is reachable from the trip overview and from a finished trip on
+  // the home screen, so Back has to return to wherever it was opened from.
+  const [expensesReturnTo, setExpensesReturnTo] = useState<Screen>("trip-overview");
 
   // Check URL parameters on mount for traveler survey access
   useEffect(() => {
@@ -56,6 +59,13 @@ export default function App() {
       setCurrentScreen('review-approve');
     }
   }, []);
+
+  // A finished trip's remaining task is filing receipts, so send it there.
+  const handleOpenTripExpenses = (demoTripId: string) => {
+    setCurrentTripId(demoTripId);
+    setExpensesReturnTo("intent-capture");
+    setCurrentScreen("expenses");
+  };
 
   // Open a pre-generated trip without leaving the app.
   const handleOpenDemoTrip = (demoTripId: string) => {
@@ -129,6 +139,7 @@ export default function App() {
             onStartPlanning={handleStartPlanning}
             tripId={currentTripId}
             onOpenDemoTrip={handleOpenDemoTrip}
+            onOpenTripExpenses={handleOpenTripExpenses}
           />
         );
       
@@ -187,7 +198,10 @@ export default function App() {
           <TripOverview
             tripId={currentTripId}
             selectedItineraryId={selectedItineraryId}
-            onViewExpenses={() => setCurrentScreen("expenses")}
+            onViewExpenses={() => {
+              setExpensesReturnTo("trip-overview");
+              setCurrentScreen("expenses");
+            }}
             onNewTrip={handleStartOverFromHome}
             onBack={() => setCurrentScreen("confirm-and-book")}
           />
@@ -197,7 +211,7 @@ export default function App() {
         return (
           <ExpensesReport
             tripId={currentTripId || undefined}
-            onBack={() => setCurrentScreen("trip-overview")}
+            onBack={() => setCurrentScreen(expensesReturnTo)}
           />
         );
       
@@ -206,6 +220,7 @@ export default function App() {
           tripId={currentTripId}
           onStartPlanning={handleStartPlanning}
           onOpenDemoTrip={handleOpenDemoTrip}
+          onOpenTripExpenses={handleOpenTripExpenses}
         />;
     }
   };

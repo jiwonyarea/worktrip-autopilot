@@ -15,6 +15,8 @@ interface IntentCaptureProps {
   tripId?: string | null;
   /** Open a pre-generated trip without running the agent. */
   onOpenDemoTrip?: (tripId: string) => void;
+  /** Jump straight to a finished trip's expenses to file receipts. */
+  onOpenTripExpenses?: (tripId: string) => void;
 }
 
 // Parsed fields interface
@@ -75,7 +77,7 @@ const INTENT_SUGGESTIONS = [
   },
 ];
 
-export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: IntentCaptureProps) {
+export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenTripExpenses }: IntentCaptureProps) {
   const [intent, setIntent] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [serverTrip, setServerTrip] = useState<Trip | null>(null);
@@ -526,8 +528,10 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
 
           <div className="flex flex-col gap-[14px]">
             {demoTrips.slice(0, 2).map((demo) => {
+              // A trip that has finished is only kept for its expense record:
+              // no countdown to show, and the action is filing receipts.
               const daysAway = daysUntil(demo.start_date);
-              const isBooked = demo.status === "booked";
+              const hasEnded = (daysUntil(demo.end_date) ?? 0) < 0;
               return (
                 <div
                   key={demo.trip_id}
@@ -538,7 +542,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                       <h3 className="text-[16px] font-semibold text-[#1f2933] m-0 truncate">
                         {demo.label}
                       </h3>
-                      {daysAway !== null && daysAway >= 0 && (
+                      {!hasEnded && daysAway !== null && daysAway >= 0 && (
                         <span className="min-w-[40px] h-[22px] px-[8px] rounded-full bg-[#EEE9FD] border border-[#916AF5] text-[#916AF5] text-[11px] font-medium flex items-center justify-center flex-shrink-0">
                           D-{daysAway}
                         </span>
@@ -567,10 +571,9 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                     >
                       View
                     </button>
-                    {isBooked ? (
-                      // A completed trip is only kept for the expense record.
+                    {hasEnded ? (
                       <button
-                        onClick={() => onOpenDemoTrip?.(demo.trip_id)}
+                        onClick={() => onOpenTripExpenses?.(demo.trip_id)}
                         className="min-w-[54px] h-[28px] px-3 rounded-[8px] bg-[#916AF5] text-white text-[14px] font-medium hover:bg-[#7c5dd4] transition-colors whitespace-nowrap"
                       >
                         Upload Receipt
