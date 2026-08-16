@@ -2,6 +2,10 @@
 
 :root {
   --font-size: 16px;
+  /* The Figma export asks for font-['Inter:Regular'] and similar, which are
+     not valid family names and silently fell back to the system sans. Inter is
+     now loaded in index.html and set as the base family. */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   
   /* Dia/Matcha Pastel Gradients & Glassmorphism */
   --pastel-pink: #FFE5F0;
@@ -255,4 +259,9 @@ html {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+
+body {
+  font-family: var(--font-sans);
 }

@@ -212,7 +212,7 @@ export default function App() {
 
   return (
     <AppShell 
-      currentNav="Trips" 
+      currentNav="Plan a Trip" 
       onNavChange={() => setCurrentScreen("intent-capture")}
       onLogoClick={handleBackToHome}
     >

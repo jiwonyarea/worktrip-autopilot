@@ -56,18 +56,48 @@ function exampleDates(startOffsetDays: number, tripLengthDays: number) {
   return `from ${phrase(start)} to ${phrase(end)} of ${end.getFullYear()}`;
 }
 
+/**
+ * Resolve a month/day to its next future occurrence. The pill labels quote
+ * dates without a year ("Nov 10-12"); flight search only looks forward, so the
+ * year has to roll over once the date passes rather than going stale.
+ */
+/** Whole days from today to a YYYY-MM-DD date; null when unset. */
+function daysUntil(iso?: string | null): number | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const target = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+function nextYearFor(month: number, day: number): number {
+  const today = new Date();
+  const thisYear = new Date(today.getFullYear(), month - 1, day);
+  return thisYear >= today ? today.getFullYear() : today.getFullYear() + 1;
+}
+
+function datePhrase(month: number, startDay: number, endDay: number): string {
+  const year = nextYearFor(month, startDay);
+  const name = MONTH_NAMES[month - 1];
+  return `from ${name} ${startDay} to ${name} ${endDay} of ${year}`;
+}
+
+// The label is the short prompt shown on the pill; `text` is what actually
+// goes to the agent, spelled out so it parses into a complete trip.
 const INTENT_SUGGESTIONS = [
   {
-    label: "Conference trip",
-    text: `Book me a trip from San Francisco to Seattle ${exampleDates(30, 3)} for 3 passengers. The purpose of this trip is a conference.`,
+    label: "Flying to Austin for SXSW, March 8-11",
+    text: `Book me a trip to Austin ${datePhrase(3, 8, 11)} for 1 passenger. The purpose of this trip is the SXSW conference.`,
   },
   {
-    label: "Client visit",
-    text: `Book me a trip from Boston to New York City ${exampleDates(21, 2)} for 2 passengers. The purpose of this trip is a client meeting.`,
+    label: "NYC to London, 5 days, quarterly review",
+    text: `Book me a trip from New York City to London ${exampleDates(40, 5)} for 2 passengers. The purpose of this trip is a quarterly review.`,
   },
   {
-    label: "Team offsite",
-    text: `Book me a trip from Los Angeles to Austin ${exampleDates(45, 4)} for 10 passengers. The purpose of this trip is an offsite.`,
+    label: "Pittsburgh to Chicago, Nov 10-12, client meeting",
+    text: `Book me a trip from Pittsburgh to Chicago ${datePhrase(11, 10, 12)} for 2 passengers. The purpose of this trip is a client meeting.`,
   },
 ];
 
@@ -276,17 +306,20 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
       {/* Content Container */}
       <div className="relative z-10 max-w-[1088px] mx-auto px-4 sm:px-6 pt-16 sm:pt-[112px]">
         {/* Centered Worktrip Autopilot Logo */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <img
             src={heroLogo}
             alt="Worktrip Autopilot"
             className="inline-block w-[244px] max-w-full h-auto"
           />
+          <p className="mt-4 text-[14px] font-normal text-[#4a5565] m-0">
+            Plan itineraries that fit your company's travel policy
+          </p>
         </div>
 
         {/* Main Search Bar */}
         <div className="max-w-[710px] mx-auto mb-6">
-          <div className="relative bg-white/80 backdrop-blur-xl rounded-[57px] border-[1.818px] border-white/50 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
+          <div className="relative bg-white/80 backdrop-blur-xl rounded-[57px] border-[6px] border-white/50 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
             <input
               ref={inputRef}
               value={displayedIntent}
@@ -297,7 +330,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
               placeholder={
                 speech.listening
                   ? "Listening — start describing the trip…"
-                  : `Try: Book me a trip from Pittsburgh to New York City ${exampleDates(30, 3)} for 2 passengers`
+                  : "Tell me about your next trip"
               }
               className="flex-1 bg-transparent border-none outline-none text-[#717182] text-[14px] tracking-[-0.15px] placeholder:text-[#717182] min-w-0"
               onKeyDown={(e) => {
@@ -468,86 +501,104 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
           </div>
         )}
 
-        {/* Suggestion Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-12 max-w-[790px] mx-auto">
+        {/* Example prompts. Each pill shows a shortened label but submits the
+            full sentence, so the agent still gets dates and traveler counts. */}
+        <div className="flex flex-wrap justify-center gap-3 mb-[60px]">
           {INTENT_SUGGESTIONS.map((suggestion, index) => (
             <button
               key={index}
               onClick={() => handleSuggestionClick(suggestion.text)}
-              className="bg-white/60 backdrop-blur-sm border border-white/50 rounded-2xl shadow-sm hover:shadow-md hover:bg-white/80 transition-all p-4 w-full text-left"
+              title={suggestion.text}
+              className="bg-white/60 backdrop-blur-sm border border-white/50 rounded-full shadow-sm hover:shadow-md hover:bg-white/80 transition-all w-full sm:w-[280px] h-[40px] px-[18px] py-[10px] flex items-center gap-2 text-left"
             >
-              <p className="text-xs font-medium text-[#101828] m-0 mb-1">{suggestion.label}</p>
-              <p className="text-xs text-[#4a5565] m-0 line-clamp-2">{suggestion.text}</p>
+              <Sparkles className="w-[18px] h-[18px] text-[#916AF5] flex-shrink-0" />
+              <span className="text-[12px] font-normal text-[#4a5565] truncate">
+                {suggestion.label}
+              </span>
             </button>
           ))}
         </div>
 
-        {/* Pre-generated trips — free to open, so the demo always works even
-            when the daily live-generation quota is spent. */}
-        <div className="max-w-[1088px] mx-auto">
-          <div className="flex items-baseline justify-between mb-4 gap-4">
-            <h2 className="text-[#1f2933] text-base font-semibold">
-              {demoTrips.length > 0 ? "Explore a finished trip" : "My Itinerary"}
-            </h2>
+        {/* Recent Trips. These are the pre-generated demo trips, so opening
+            one costs nothing and works even when the daily quota is spent. */}
+        <div className="max-w-[700px] mx-auto">
+          <div className="flex items-baseline justify-between gap-4 mb-[14px]">
+            <h2 className="text-[14px] font-semibold text-[#1f2933] m-0">Recent Trips</h2>
             {quota && !quota.available && (
-              <span className="text-xs text-[#4a5565]">
-                Today's live runs are used up — these are ready to explore
+              <span className="text-[12px] text-[#4a5565]">
+                Today's live runs are used up
               </span>
             )}
           </div>
 
           {loadingDemos && (
-            <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-sm p-6 flex items-center gap-3">
+            <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-sm h-[90px] px-6 flex items-center gap-3">
               <Loader2 className="w-4 h-4 animate-spin text-[#916AF5]" />
-              <span className="text-sm text-[#4a5565]">Loading example trips…</span>
+              <span className="text-[14px] text-[#4a5565]">Loading trips…</span>
             </div>
           )}
 
           {!loadingDemos && demoTrips.length === 0 && (
-            <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-sm p-6">
-              <p className="text-sm text-[#4a5565] m-0">
+            <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-sm h-[90px] px-6 flex items-center">
+              <p className="text-[14px] text-[#4a5565] m-0">
                 No trips yet — describe one above and the agent will plan it.
               </p>
             </div>
           )}
 
-          {demoTrips.map((demo) => (
-            <div
-              key={demo.trip_id}
-              className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] p-6 mb-4 relative"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2 flex-wrap">
-                    <h3 className="text-[#1f2933] text-base font-semibold m-0">{demo.label}</h3>
-                    <Badge className="bg-[#EDE7FD] text-[#916AF5] border border-[#916AF5]/30 rounded-full px-3 py-1 text-xs">
-                      {demo.option_count} options ready
-                    </Badge>
+          <div className="flex flex-col gap-[14px]">
+            {demoTrips.slice(0, 2).map((demo) => {
+              const daysAway = daysUntil(demo.start_date);
+              return (
+                <div
+                  key={demo.trip_id}
+                  className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.06)] w-full h-[90px] px-6 flex items-center justify-between gap-4"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <h3 className="text-[14px] font-semibold text-[#1f2933] m-0 truncate">
+                        {demo.label}
+                      </h3>
+                      {daysAway !== null && daysAway >= 0 && (
+                        <span className="text-[11px] text-[#916AF5] border border-[#916AF5]/40 rounded-full px-2 py-0.5 flex-shrink-0">
+                          D-{daysAway}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-[12px] text-[#4a5565] flex-wrap">
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {demo.destination}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {formatDateString(demo.start_date)} – {formatDateString(demo.end_date)}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5" />
+                        {demo.travelers} traveler{demo.travelers === 1 ? "" : "s"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-[#4a5565]">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      <span>{demo.origin_city} → {demo.destination}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>{demo.start_date} - {demo.end_date}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <span>{demo.travelers} traveler{demo.travelers === 1 ? "" : "s"}</span>
-                    </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => onOpenDemoTrip?.(demo.trip_id)}
+                      className="min-w-[54px] h-[28px] px-3 rounded-lg border border-[#916AF5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => onOpenDemoTrip?.(demo.trip_id)}
+                      className="min-w-[54px] h-[28px] px-3 rounded-lg bg-[#916AF5] text-white text-[14px] font-medium hover:bg-[#7c5dd4] transition-colors whitespace-nowrap"
+                    >
+                      Edit
+                    </button>
                   </div>
                 </div>
-                <Button
-                  onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                  className="bg-[#F2F1F8] text-[#916AF5] border border-[#916AF5] hover:bg-[#ddd0ff] rounded-lg px-4 py-2 text-sm self-center flex-shrink-0"
-                >
-                  View
-                </Button>
-              </div>
-            </div>
-          ))}
+              );
+            })}
+          </div>
         </div>
       </div>
 

@@ -33,7 +33,7 @@ export function AppShell({ children, currentNav = "Trips", onNavChange, onLogoCl
           </button>
           
           <nav className="flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar">
-            {["Trips", "Policies", "Expenses"].map((item) => (
+            {["Plan a Trip", "My Trips", "Policies"].map((item) => (
               <button
                 key={item}
                 onClick={() => onNavChange?.(item)}
