@@ -46,21 +46,13 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-function exampleDates(startOffsetDays: number, tripLengthDays: number) {
-  const start = new Date();
-  start.setDate(start.getDate() + startOffsetDays);
-  const end = new Date(start);
-  end.setDate(end.getDate() + tripLengthDays);
-
-  const phrase = (d: Date) => `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
-  return `from ${phrase(start)} to ${phrase(end)} of ${end.getFullYear()}`;
+/** A date `offsetDays` from today, as "Month D" — no year needed. */
+function dayPhrase(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
 }
 
-/**
- * Resolve a month/day to its next future occurrence. The pill labels quote
- * dates without a year ("Nov 10-12"); flight search only looks forward, so the
- * year has to roll over once the date passes rather than going stale.
- */
 /** Whole days from today to a YYYY-MM-DD date; null when unset. */
 function daysUntil(iso?: string | null): number | null {
   if (!iso) return null;
@@ -72,32 +64,22 @@ function daysUntil(iso?: string | null): number | null {
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
-function nextYearFor(month: number, day: number): number {
-  const today = new Date();
-  const thisYear = new Date(today.getFullYear(), month - 1, day);
-  return thisYear >= today ? today.getFullYear() : today.getFullYear() + 1;
-}
-
-function datePhrase(month: number, startDay: number, endDay: number): string {
-  const year = nextYearFor(month, startDay);
-  const name = MONTH_NAMES[month - 1];
-  return `from ${name} ${startDay} to ${name} ${endDay} of ${year}`;
-}
-
-// The label is the short prompt shown on the pill; `text` is what actually
-// goes to the agent, spelled out so it parses into a complete trip.
+// Pills submit what they say. The agent infers the year and, where no origin
+// is given, the departure city comes from location detection — so these read
+// the way someone would actually type. The middle one needs a concrete start
+// date, since "5 days" on its own has nothing to anchor to.
 const INTENT_SUGGESTIONS = [
   {
     label: "Flying to Austin for SXSW, March 8-11",
-    text: `Book me a trip to Austin ${datePhrase(3, 8, 11)} for 1 passenger. The purpose of this trip is the SXSW conference.`,
+    text: "Flying to Austin for SXSW, March 8-11",
   },
   {
     label: "NYC to London, 5 days, quarterly review",
-    text: `Book me a trip from New York City to London ${exampleDates(40, 5)} for 2 passengers. The purpose of this trip is a quarterly review.`,
+    text: `NYC to London for 5 days starting ${dayPhrase(35)}, quarterly review`,
   },
   {
     label: "Pittsburgh to Chicago, Nov 10-12, client meeting",
-    text: `Book me a trip from Pittsburgh to Chicago ${datePhrase(11, 10, 12)} for 2 passengers. The purpose of this trip is a client meeting.`,
+    text: "Pittsburgh to Chicago, Nov 10-12, client meeting",
   },
 ];
 
@@ -319,7 +301,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
 
         {/* Main Search Bar */}
         <div className="max-w-[710px] mx-auto mb-6">
-          <div className="relative bg-white/80 backdrop-blur-xl rounded-[57px] border-[6px] border-white/50 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
+          <div className="relative bg-white/80 backdrop-blur-xl rounded-[57px] ring-[6px] ring-white/50 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
             <input
               ref={inputRef}
               value={displayedIntent}
@@ -549,6 +531,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
           <div className="flex flex-col gap-[14px]">
             {demoTrips.slice(0, 2).map((demo) => {
               const daysAway = daysUntil(demo.start_date);
+              const isBooked = demo.status === "booked";
               return (
                 <div
                   key={demo.trip_id}
@@ -556,7 +539,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <h3 className="text-[14px] font-semibold text-[#1f2933] m-0 truncate">
+                      <h3 className="text-[16px] font-semibold text-[#1f2933] m-0 truncate">
                         {demo.label}
                       </h3>
                       {daysAway !== null && daysAway >= 0 && (
@@ -584,16 +567,26 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip }: Inten
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                      className="min-w-[54px] h-[28px] px-3 rounded-lg border border-[#916AF5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+                      className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-white/70 text-[#1f2933] text-[14px] font-medium hover:bg-white transition-colors"
                     >
                       View
                     </button>
-                    <button
-                      onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                      className="min-w-[54px] h-[28px] px-3 rounded-lg bg-[#916AF5] text-white text-[14px] font-medium hover:bg-[#7c5dd4] transition-colors whitespace-nowrap"
-                    >
-                      Edit
-                    </button>
+                    {isBooked ? (
+                      // A completed trip is only kept for the expense record.
+                      <button
+                        onClick={() => onOpenDemoTrip?.(demo.trip_id)}
+                        className="min-w-[54px] h-[28px] px-3 rounded-[8px] bg-[#916AF5] text-white text-[14px] font-medium hover:bg-[#7c5dd4] transition-colors whitespace-nowrap"
+                      >
+                        Upload Receipt
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onOpenDemoTrip?.(demo.trip_id)}
+                        className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-white/70 text-[#1f2933] text-[14px] font-medium hover:bg-white transition-colors"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
                 </div>
               );

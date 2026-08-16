@@ -111,8 +111,11 @@ export function parseIntent(
     maxTokens: 2000,
     system:
       "You extract structured business-trip details from a traveler's own words. " +
-      `Today is ${today}; resolve relative dates ("next Tuesday", "the week of the 12th") against it, ` +
-      "and assume a future date when the year is ambiguous. Expand airport codes and " +
+      `Today is ${today}; resolve relative dates ("next Tuesday", "the week of the 12th") against it. ` +
+      "People rarely say the year, so never treat a missing year as a missing " +
+      "date: when only a month and day are given, assume the current year, and " +
+      "roll to the next year only if that date has already passed. " +
+      "Expand airport codes and " +
       "informal names to full city names. Never invent a destination or dates that " +
       "were not stated or clearly implied — list anything you cannot determine in missing_fields.",
     content: intentText,

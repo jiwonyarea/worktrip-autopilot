@@ -190,6 +190,7 @@ export interface DemoTrip {
   end_date: string;
   travelers: number;
   option_count: number;
+  status: string;
 }
 
 export interface DemoCatalog {

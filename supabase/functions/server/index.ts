@@ -130,6 +130,9 @@ api.get("/demo-trips", async (c) => {
         end_date: trip.end_date,
         travelers: trip.travelers?.length ?? 1,
         option_count: trip.itineraries?.length ?? 0,
+        // Drives the card's secondary action: a booked trip is done and only
+        // needs receipts filing; anything else is still editable.
+        status: trip.status,
       };
     }),
   );
