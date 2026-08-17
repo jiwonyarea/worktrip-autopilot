@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Trip, getTrip } from "../../utils/tripApi";
 import { TripSummaryCard } from "../TripSummaryCard";
-import { getAirlineLogo } from "../../utils/airlineLogos";
+import { AirlineLogo } from "../AirlineLogo";
 import { parseFlight, formatMoney, nightsBetween } from "../../utils/itinerary";
 import svgPaths from "../../imports/svg-26i6mfklc7";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
@@ -272,11 +272,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
                       {leg ? (
                         <div className="flex items-center gap-3">
                           <div className="bg-white rounded-[8px] w-10 h-10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            <img
-                              src={getAirlineLogo(raw)}
-                              alt={leg.airline}
-                              className="w-[30px] h-[30px] object-contain"
-                            />
+                            <AirlineLogo flight={raw} alt={leg.airline} size={30} />
                           </div>
                           <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">

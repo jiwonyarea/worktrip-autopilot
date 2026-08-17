@@ -259,9 +259,13 @@ const ITINERARY_SCHEMA = {
             type: "string",
             enum: ["compliant", "review_required", "out_of_policy"],
             description:
-              "compliant: within every stated limit. review_required: inside " +
-              "the limits but close enough to warrant a look, or a limit was " +
-              "not stated. out_of_policy: exceeds a stated limit.",
+              "You only propose options you consider bookable, so the default " +
+              "is compliant — including when no budget was stated, since " +
+              "nothing has been exceeded. Use review_required only for a " +
+              "concrete reason the organiser must weigh: within about 10% of a " +
+              "stated limit, a cost the traveller must claim back, or a rule " +
+              "the trip strains. Use out_of_policy only when a stated limit is " +
+              "actually exceeded. An absent budget is not grounds for review.",
           },
           total_cost: { type: "number", description: "Total for ALL travelers, USD" },
           policy_compliant: { type: "boolean" },

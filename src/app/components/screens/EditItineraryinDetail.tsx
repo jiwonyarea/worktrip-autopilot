@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ChevronLeft, MapPin, Calendar, Users, Briefcase, Plane, Hotel, Car, Utensils, Loader2, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { ChevronLeft, MapPin, Calendar, CalendarCheck, Users, Briefcase, Plane, Hotel, Car, Utensils, Loader2, Sparkles } from "lucide-react";
 import imgImageHotel from "figma:asset/3a7194d0c070824d982b80f6a329057d5ed3025a.png";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
-import { Trip, getTrip, confirmBooking } from "../../utils/tripApi";
+import { Trip, getTrip } from "../../utils/tripApi";
 import { TripSummaryCard } from "../TripSummaryCard";
-import { getAirlineLogo } from "../../utils/airlineLogos";
+import { AirlineLogo } from "../AirlineLogo";
 import {
   parseFlight,
   flightDuration,
@@ -47,11 +46,7 @@ function FlightCard({ flight, raw }: { flight: ParsedFlight | null; raw?: string
     <div className="bg-[#fafafa] rounded-xl p-4 border border-[#e5e7eb]">
       <div className="flex items-center gap-3 mb-2">
         <div className="w-8 h-8 flex items-center justify-center">
-          <img
-            src={getAirlineLogo(flight.raw)}
-            alt={flight.airline}
-            className="w-6 h-6 object-contain"
-          />
+          <AirlineLogo flight={flight.raw} alt={flight.airline} size={24} />
         </div>
 
         <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0 mr-0 lg:mr-8">
@@ -133,22 +128,14 @@ export function EditItineraryinDetail({
 
   const itinerary = pickItinerary(trip, selectedItineraryId);
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!tripId || !itinerary) return;
 
+    // The booking call itself belongs to the tracker screen, so the progress
+    // it shows is the real request rather than a replay of one already done.
     setBooking(true);
-    try {
-      // Record the choice before advancing — Trip Overview reads it back.
-      await confirmBooking(tripId, itinerary.id);
-      toast.success("Trip confirmed");
-      if (onComplete) onComplete();
-      else if (onConfirm) onConfirm();
-    } catch (err) {
-      console.error("Booking failed:", err);
-      toast.error(err instanceof Error ? err.message : "Could not confirm this trip");
-    } finally {
-      setBooking(false);
-    }
+    if (onComplete) onComplete();
+    else if (onConfirm) onConfirm();
   };
 
   if (loading) {
@@ -331,7 +318,7 @@ export function EditItineraryinDetail({
                   Total cost ({travelers} traveler{travelers === 1 ? "" : "s"})
                 </p>
                 <p className="text-2xl sm:text-[30px] font-semibold text-[#0a0a0a] leading-tight sm:leading-9">
-                  {formatMoney(itinerary.total_cost)}
+                  {formatMoney(bookableTotal)}
                 </p>
               </div>
 
@@ -428,9 +415,11 @@ export function EditItineraryinDetail({
 
                     <div className="pt-3 border-t border-[#e5e7eb]">
                       <p className="text-xs text-[#6a7282] flex items-start gap-1.5 m-0">
-                        <svg className="w-3 h-3 mt-0.5 flex-shrink-0" viewBox="0 0 12 12" fill="none">
-                          <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1"/>
-                        </svg>
+                        <CalendarCheck
+                          className="w-3.5 h-3.5 mt-px flex-shrink-0"
+                          strokeWidth={1.75}
+                          aria-hidden
+                        />
                         <span>Free cancellation up to 24 hours before check-in</span>
                       </p>
                     </div>

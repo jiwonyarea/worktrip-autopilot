@@ -6,6 +6,7 @@ import { AgentWorkingSimple } from "./components/screens/AgentWorkingSimple";
 import { ReviewAndApprove } from "./components/screens/ReviewAndApprove";
 import { EditItinerary } from "./components/screens/EditItinerary";
 import { EditItineraryinDetail } from "./components/screens/EditItineraryinDetail";
+import { BookingInProgress } from "./components/screens/BookingInProgress";
 import { ConfirmAndBook } from "./components/screens/ConfirmAndBook";
 import { ExpensesReport } from "./components/screens/ExpensesReport";
 import { AppShell } from "./components/AppShell";
@@ -21,6 +22,7 @@ type Screen =
   | "edit-itinerary"
   | "edit-itinerary-detail"
   | "confirm-and-book"
+  | "booking-progress"
   | "trip-overview"
   | "expenses"
   | "traveler-survey";
@@ -134,6 +136,10 @@ export default function App() {
   };
 
   const handleConfirmAndBookComplete = () => {
+    setCurrentScreen("booking-progress");
+  };
+
+  const handleBookingComplete = () => {
     setCurrentScreen("trip-overview");
   };
 
@@ -205,6 +211,16 @@ export default function App() {
           />
         );
       
+      case "booking-progress":
+        return (
+          <BookingInProgress
+            tripId={currentTripId}
+            selectedItineraryId={selectedItineraryId}
+            onComplete={handleBookingComplete}
+            onBack={() => setCurrentScreen("edit-itinerary-detail")}
+          />
+        );
+
       case "trip-overview":
         return (
           <TripOverview
