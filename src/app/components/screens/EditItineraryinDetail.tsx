@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, MapPin, Calendar, Users, Briefcase, Plane, Hotel, Car, Utensils, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import imgImageAirline from "figma:asset/50ba81ee3baed0d032549253a352c5d27d54adb9.png";
 import imgImageHotel from "figma:asset/3a7194d0c070824d982b80f6a329057d5ed3025a.png";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
 import { Trip, getTrip, confirmBooking } from "../../utils/tripApi";
 import { TripSummaryCard } from "../TripSummaryCard";
+import { getAirlineLogo } from "../../utils/airlineLogos";
 import {
   parseFlight,
   flightDuration,
@@ -46,7 +47,11 @@ function FlightCard({ flight, raw }: { flight: ParsedFlight | null; raw?: string
     <div className="bg-[#fafafa] rounded-xl p-4 border border-[#e5e7eb]">
       <div className="flex items-center gap-3 mb-2">
         <div className="w-8 h-8 flex items-center justify-center">
-          <img src={imgImageAirline} alt={flight.airline} className="w-6 h-6 object-contain" />
+          <img
+            src={getAirlineLogo(flight.raw)}
+            alt={flight.airline}
+            className="w-6 h-6 object-contain"
+          />
         </div>
 
         <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0 mr-0 lg:mr-8">
@@ -100,6 +105,7 @@ export function EditItineraryinDetail({
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!tripId) {
@@ -231,6 +237,13 @@ export function EditItineraryinDetail({
   // Per-diems are policy, shared by every option.
   const policyExtras = (trip as any).policy_extras;
 
+  // Flights and hotel are booked and charged now. Ground transport and food
+  // are per-diem allowances, so they are shown as budget remaining rather than
+  // added to a total the organiser is approving.
+  const bookableTotal = (details.flight_cost ?? 0) + (details.hotel_cost ?? 0);
+  const groundBudget = details.ground_transport_cost ?? 0;
+  const foodBudget = details.food_cost ?? 0;
+
   // Features are the agent's reasons for this option; fall back to its rationale.
   // Same bullets the option card showed, so the choice carries forward.
   const highlights: { text: string; type: string }[] =
@@ -248,7 +261,13 @@ export function EditItineraryinDetail({
         {/* Header — same shape as the selection screen, so the two read as one
             flow rather than two different products. */}
         <div className="flex items-start gap-3 mb-6">
-          <Sparkles className="w-10 h-10 text-[#916AF5] fill-[#916AF5] flex-shrink-0" aria-hidden />
+          <motion.div
+            animate={reduceMotion ? undefined : { scale: [1, 1.12, 1], rotate: [0, 8, 0, -8, 0] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            className="flex-shrink-0"
+          >
+            <Sparkles className="w-10 h-10 text-[#916AF5] fill-[#916AF5]" aria-hidden />
+          </motion.div>
           <div>
             <h1 className="font-display font-medium text-[20px] leading-tight text-[#0a0a0a] m-0">
               Edit and finalize your itinerary
@@ -316,19 +335,27 @@ export function EditItineraryinDetail({
                 </p>
               </div>
 
-              {/* Departure day */}
+              {/* Departure day. A single rail runs the full height of the day
+                  and the content is indented past it, so no card covers it. */}
               <div className="mb-6">
                 <h4 className="text-base font-semibold text-[#1f2933] mb-4">
                   {formatDayHeading(trip.start_date)}
                 </h4>
 
+                <div className="relative pl-8">
+                  <span
+                    className="absolute left-[9px] top-1 bottom-0 w-px bg-[#D8D3E5]"
+                    aria-hidden
+                  />
+
                 {/* Outbound flight */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 relative">
-                      {/* rail continues down to the hotel node */}
-                      <span className="absolute left-[9px] top-[26px] bottom-[-22px] w-px bg-[#D8D3E5]" aria-hidden />
-                      <Plane className="w-5 h-5 text-[#4a5565] relative z-10 bg-white" strokeWidth={1.75} />
+                      <Plane
+                        className="w-5 h-5 text-[#4a5565] absolute -left-8 bg-white py-0.5"
+                        strokeWidth={1.75}
+                      />
                       <span className="text-base text-[#1f2933]">Flight to {trip.destination}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -350,8 +377,10 @@ export function EditItineraryinDetail({
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 relative">
-                      <span className="absolute left-[9px] top-[26px] bottom-[-22px] w-px bg-[#D8D3E5]" aria-hidden />
-                      <Hotel className="w-5 h-5 text-[#4a5565] relative z-10 bg-white" strokeWidth={1.75} />
+                      <Hotel
+                        className="w-5 h-5 text-[#4a5565] absolute -left-8 bg-white py-0.5"
+                        strokeWidth={1.75}
+                      />
                       <span className="text-base text-[#1f2933]">
                         {nights}-night stay in {trip.destination}
                       </span>
@@ -397,17 +426,12 @@ export function EditItineraryinDetail({
                       </div>
                     </div>
 
-                    <div className="space-y-1 text-xs text-[#6a7282] mb-3">
-                      <div>Check-in: {formatDate(trip.start_date)}, 4:00PM</div>
-                      <div>Check-out: {formatDate(trip.end_date)}, 11:00AM</div>
-                    </div>
-
                     <div className="pt-3 border-t border-[#e5e7eb]">
-                      <p className="text-xs text-[#6a7282] flex items-start gap-1.5">
-                        <svg className="w-3 h-3 mt-0.5" viewBox="0 0 12 12" fill="none">
+                      <p className="text-xs text-[#6a7282] flex items-start gap-1.5 m-0">
+                        <svg className="w-3 h-3 mt-0.5 flex-shrink-0" viewBox="0 0 12 12" fill="none">
                           <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1"/>
                         </svg>
-                        <span>{formatMoney(details.hotel_cost)} total for {nights} night{nights === 1 ? "" : "s"}</span>
+                        <span>Free cancellation up to 24 hours before check-in</span>
                       </p>
                     </div>
                   </div>
@@ -416,11 +440,13 @@ export function EditItineraryinDetail({
                 {/* Ground Transport */}
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2 relative">
-                    <span className="absolute left-[9px] top-[26px] bottom-[-18px] w-px bg-[#D8D3E5]" aria-hidden />
-                    <Car className="w-5 h-5 text-[#4a5565] relative z-10 bg-white" strokeWidth={1.75} />
+                    <Car
+                      className="w-5 h-5 text-[#4a5565] absolute -left-8 bg-white py-0.5"
+                      strokeWidth={1.75}
+                    />
                     <span className="text-base text-[#1f2933]">Ground Transport</span>
                   </div>
-                  <p className="text-sm text-[#6a7282] ml-7">
+                  <p className="text-sm text-[#6a7282]">
                     {policyExtras
                       ? `${formatMoney(policyExtras.ground_transport_per_day)}/day × ${nights} days = ${formatMoney(details.ground_transport_cost)}`
                       : details.ground_transport_summary}
@@ -430,15 +456,18 @@ export function EditItineraryinDetail({
                 {/* Food */}
                 <div className="mb-6">
                   <div className="flex items-center gap-2 mb-2 relative">
-                    {/* last node — no rail below it */}
-                    <Utensils className="w-5 h-5 text-[#4a5565] relative z-10 bg-white" strokeWidth={1.75} />
+                    <Utensils
+                      className="w-5 h-5 text-[#4a5565] absolute -left-8 bg-white py-0.5"
+                      strokeWidth={1.75}
+                    />
                     <span className="text-base text-[#1f2933]">Food</span>
                   </div>
-                  <p className="text-sm text-[#6a7282] ml-7">
+                  <p className="text-sm text-[#6a7282]">
                     {policyExtras
                       ? `${formatMoney(policyExtras.food_per_day)}/day × ${nights} days = ${formatMoney(details.food_cost)}`
                       : details.food_summary}
                   </p>
+                </div>
                 </div>
               </div>
 
@@ -517,7 +546,7 @@ export function EditItineraryinDetail({
 
                         <div className="flex items-baseline gap-2 mb-2">
                           <span className="text-3xl font-normal text-[#0a0a0a]">
-                            {formatMoney(itinerary.total_cost)}
+                            {formatMoney(bookableTotal)}
                           </span>
                           {trip.total_budget ? (
                             <span className="text-sm text-[#6a7282]">
@@ -533,7 +562,7 @@ export function EditItineraryinDetail({
                             style={{
                               width: `${Math.min(
                                 trip.total_budget
-                                  ? (itinerary.total_cost / trip.total_budget) * 100
+                                  ? (bookableTotal / trip.total_budget) * 100
                                   : 100,
                                 100,
                               )}%`,
@@ -556,19 +585,32 @@ export function EditItineraryinDetail({
                         <div className="space-y-3.5">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-[#4a5565]">Flights</span>
-                            <span className="font-normal text-[#1f2933]">{formatMoney(details.flight_cost)}</span>
+                            <span className="font-normal text-[#1f2933]">
+                              {formatMoney(details.flight_cost)}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-[#4a5565]">Hotels</span>
-                            <span className="font-normal text-[#1f2933]">{formatMoney(details.hotel_cost)}</span>
+                            <span className="text-[#4a5565]">
+                              Hotels ({nights} night{nights === 1 ? "" : "s"})
+                            </span>
+                            <span className="font-normal text-[#1f2933]">
+                              {formatMoney(details.hotel_cost)}
+                            </span>
                           </div>
+                          {/* Nothing is spent against a per-diem until the trip
+                              happens, so show it as drawn/allowed with the
+                              allowance muted. */}
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-[#4a5565]">Ground transportation</span>
-                            <span className="font-normal text-[#1f2933]">{formatMoney(details.ground_transport_cost)}</span>
+                            <span className="text-[#4a5565]">Ground Transportation</span>
+                            <span className="font-normal text-[#1f2933]">
+                              $0 <span className="text-[#9095a1]">/ {formatMoney(groundBudget)}</span>
+                            </span>
                           </div>
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-[#4a5565]">Food</span>
-                            <span className="font-normal text-[#1f2933]">{formatMoney(details.food_cost)}</span>
+                            <span className="font-normal text-[#1f2933]">
+                              $0 <span className="text-[#9095a1]">/ {formatMoney(foodBudget)}</span>
+                            </span>
                           </div>
                         </div>
                       </div>

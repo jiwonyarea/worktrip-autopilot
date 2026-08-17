@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import {
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { Trip, getTrip } from "../../utils/tripApi";
 import { TripSummaryCard } from "../TripSummaryCard";
+import { getAirlineLogo } from "../../utils/airlineLogos";
 import { parseFlight, formatMoney, nightsBetween } from "../../utils/itinerary";
 import svgPaths from "../../imports/svg-26i6mfklc7";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
@@ -28,38 +30,6 @@ interface ReviewAndApproveProps {
   tripId?: string | null;
 }
 
-// Airline logo URLs
-const AIRLINE_LOGOS = {
-  delta: "https://content.airhex.com/content/logos/airlines_DL_100_100_s.png",
-  united: "https://content.airhex.com/content/logos/airlines_UA_100_100_s.png",
-  spirit: "https://content.airhex.com/content/logos/airlines_NK_100_100_s.png",
-  jetblue: "https://content.airhex.com/content/logos/airlines_B6_100_100_s.png",
-  american: "https://content.airhex.com/content/logos/airlines_AA_100_100_s.png",
-  southwest: "https://content.airhex.com/content/logos/airlines_WN_100_100_s.png"
-};
-
-// Helper function to get airline logo
-const getAirlineLogo = (flightDetails: string | undefined) => {
-  if (!flightDetails) return AIRLINE_LOGOS.delta;
-  
-  const airlineName = flightDetails.toLowerCase();
-  
-  if (airlineName.includes('delta')) {
-    return AIRLINE_LOGOS.delta;
-  } else if (airlineName.includes('united')) {
-    return AIRLINE_LOGOS.united;
-  } else if (airlineName.includes('spirit')) {
-    return AIRLINE_LOGOS.spirit;
-  } else if (airlineName.includes('jetblue') || airlineName.includes('jet blue')) {
-    return AIRLINE_LOGOS.jetblue;
-  } else if (airlineName.includes('american')) {
-    return AIRLINE_LOGOS.american;
-  } else if (airlineName.includes('southwest')) {
-    return AIRLINE_LOGOS.southwest;
-  }
-  
-  return AIRLINE_LOGOS.delta;
-};
 
 export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTrip, tripId }: ReviewAndApproveProps) {
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -67,6 +37,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItineraryId, setSelectedItineraryId] = useState<string | null>(null);
   const [hotelImages, setHotelImages] = useState<string[]>([]);
+  const reduceMotion = useReducedMotion();
 
   // Function to switch itinerary option and navigate
   const handleSwitchOption = (optionId: string) => {
@@ -210,10 +181,13 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
       <div className="relative z-10 max-w-[1088px] mx-auto px-4 sm:px-6 pt-[60px]">
         {/* Header */}
         <div className="flex items-start gap-3 mb-6">
-          <Sparkles
-            className="w-10 h-10 text-[#916AF5] fill-[#916AF5] flex-shrink-0"
-            aria-hidden
-          />
+          <motion.div
+            animate={reduceMotion ? undefined : { scale: [1, 1.12, 1], rotate: [0, 8, 0, -8, 0] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            className="flex-shrink-0"
+          >
+            <Sparkles className="w-10 h-10 text-[#916AF5] fill-[#916AF5]" aria-hidden />
+          </motion.div>
           <div>
             <h1 className="font-display font-medium text-[20px] leading-tight text-[#0a0a0a] m-0">
               Choose your itinerary
