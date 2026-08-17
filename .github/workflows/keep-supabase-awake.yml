@@ -37,3 +37,5 @@ jobs:
             echo "::error::Health check failed with HTTP $code — the project may be paused."
             exit 1
           fi
+
+# Registered via a no-op touch; GitHub indexes workflows on push.
