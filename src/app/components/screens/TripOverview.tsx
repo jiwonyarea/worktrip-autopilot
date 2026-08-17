@@ -5,8 +5,6 @@ import {
   Download, 
   MapPin, 
   Calendar, 
-  Users, 
-  Briefcase,
   Plane,
   Hotel,
   CheckCircle,
@@ -15,9 +13,13 @@ import {
   Filter,
   Upload,
   FileText,
-  Info
+  Info,
+  Sparkles
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { Button } from "../ui/button";
+import { TripSummaryCard } from "../TripSummaryCard";
+import { TripTotalsCard } from "../TripTotalsCard";
 import svgPaths from "../../imports/svg-kxhvyi8xmt";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
 import { Loader2 } from "lucide-react";
@@ -42,6 +44,8 @@ interface TripOverviewProps {
 export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, selectedItineraryId }: TripOverviewProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "expenses">("overview");
   const [showSuccessBanner, setShowSuccessBanner] = useState(true);
+  // Motion loops are JS-driven, so the CSS reduced-motion rule cannot reach them.
+  const reduceMotion = useReducedMotion();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +117,6 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
   const outbound = parseFlight(details.outbound_flight);
   const inbound = parseFlight(details.return_flight);
   const isBooked = trip.status === "booked";
-  const inPolicy = itinerary?.policy_compliant !== false;
 
   // Days until departure, for the "Next event" card.
   const daysToDeparture = trip.start_date
@@ -135,74 +138,67 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
     >
       {/* Main content */}
       <div className="relative max-w-[1088px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Success Banner */}
+        {/* The agent speaking, in the same voice it used while planning —
+            a sparkle and two lines, not a green success box. */}
         {showSuccessBanner && (
-          <div className="mb-6 bg-gradient-to-r from-[#d1f4e0] to-[#d4f9e2] rounded-2xl shadow-sm">
-            <div className="p-4 sm:p-5 flex items-start gap-4 animate-in slide-in-from-top-2 duration-500 ease-out">
-              <div className="flex-shrink-0 w-12 h-12 bg-[#42be5b] rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105 duration-200">
-                <CheckCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
-              </div>
-              <div className="flex-1 min-w-0 pt-1">
-                <h3 className="text-base font-semibold text-[#0a0a0a] mb-0.5 tracking-tight">
-                  Your agent has completed the booking!
-                </h3>
-                <p className="text-sm text-[#364153] leading-relaxed">
-                  Your confirmation will be sent to your inbox
-                </p>
-              </div>
-              <button
-                onClick={() => setShowSuccessBanner(false)}
-                className="flex-shrink-0 text-[#4a5565] hover:text-[#1f2933] hover:bg-[rgba(0,0,0,0.05)] transition-all duration-200 p-1.5 rounded-md self-center group"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-              </button>
+          <div className="mb-6 flex items-start gap-3">
+            <motion.div
+              animate={
+                reduceMotion ? undefined : { scale: [1, 1.12, 1], rotate: [0, 8, 0, -8, 0] }
+              }
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+              className="flex-shrink-0"
+            >
+              <Sparkles className="w-10 h-10 text-[#916AF5] fill-[#916AF5]" aria-hidden />
+            </motion.div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-display font-medium text-[20px] leading-tight text-[#0a0a0a] m-0">
+                Worktrip Autopilot has completed the booking
+              </h2>
+              <p className="text-[14px] font-normal text-[#4a5565] m-0 mt-1">
+                Your confirmation will be sent to your inbox
+              </p>
             </div>
+            <button
+              onClick={() => setShowSuccessBanner(false)}
+              className="flex-shrink-0 text-[#9095a1] hover:text-[#1f2933] transition-colors p-1.5 rounded-md"
+              aria-label="Dismiss"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         )}
 
         {/* Header - removed old back button and share section */}
 
-        {/* Trip Header Card */}
-        <div className="bg-white rounded-2xl shadow-md p-5 sm:p-6 mb-4 relative">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <h1 className="text-lg font-semibold text-[#1f2933]">
-                  {trip.trip_name}
-                </h1>
-
-                <div className={`${isBooked ? "bg-[#dafbe8]" : "bg-[#D4E9FF]"} rounded-full px-3 py-1 flex items-center justify-center`}>
-                  <span className={`font-['Inter:Medium',sans-serif] font-medium text-[12px] leading-[16px] ${isBooked ? "text-[#4dc13a]" : "text-[#1246A5]"}`}>
-                    {isBooked ? "✓ Booked" : trip.status}
-                  </span>
-                </div>
-                
-              </div>
-
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[#4a5565]">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4" />
-                  <span>{trip.destination}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4" />
-                  <span>{trip.start_date} - {trip.end_date}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4" />
-                  <span>{travelers} traveler{travelers === 1 ? "" : "s"}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Briefcase className="w-4 h-4" />
-                  <span>{trip.purpose}</span>
-                </div>
-              </div>
+        {/* Same trip card as every other screen — this one used to print raw
+            ISO dates and drift from the rest. */}
+        <TripSummaryCard
+          className="mb-4"
+          name={trip.trip_name || trip.inferred_trip_name || "Work Trip"}
+          destination={trip.destination || trip.inferred_destination}
+          startDate={trip.start_date}
+          endDate={trip.end_date}
+          travelers={travelers}
+          purpose={trip.purpose}
+          chip={
+            <div
+              className={`${isBooked ? "bg-[#dafbe8]" : "bg-[#D4E9FF]"} rounded-full px-3 py-1 flex items-center justify-center`}
+            >
+              <span
+                className={`font-medium text-[12px] leading-[16px] ${isBooked ? "text-[#4dc13a]" : "text-[#1246A5]"}`}
+              >
+                {isBooked ? "\u2713 Booked" : trip.status}
+              </span>
             </div>
-
-            
-          </div>
-        </div>
+          }
+          actions={
+            <Button className="bg-[#916af5] hover:bg-[#7c59d4] text-white rounded-lg px-3 py-1.5 h-8 text-sm font-medium gap-2">
+              <Share2 className="w-4 h-4" />
+              Share itinerary
+            </Button>
+          }
+        />
 
         {/* Tabs */}
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
@@ -252,9 +248,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                         </h3>
                       </div>
                       <p className="text-xs text-[#4a5565] leading-relaxed">
-                        {trip.confirmations
-                          ? `Flight ${trip.confirmations.flight} · Hotel ${trip.confirmations.hotel}`
-                          : "Flights, hotels, and ground transportation are secured"}
+                        Flights, hotels, and ground transportation are secured
                       </p>
                     </div>
 
@@ -289,12 +283,18 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                           Edit booking
                         </Button>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                          <Share2 className="w-[22px] h-[22px] text-[#1f2933]" />
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgba(0,0,0,0.1)] bg-[#f5f7fa] text-[#1f2933] hover:bg-gray-100 transition-colors"
+                          aria-label="Share schedule"
+                        >
+                          <Share2 className="w-4 h-4" strokeWidth={1.75} />
                         </button>
-                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                          <Download className="w-[22px] h-[22px] text-[#1f2933]" />
+                        <button
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgba(0,0,0,0.1)] bg-[#f5f7fa] text-[#1f2933] hover:bg-gray-100 transition-colors"
+                          aria-label="Download schedule"
+                        >
+                          <Download className="w-4 h-4" strokeWidth={1.75} />
                         </button>
                       </div>
                     </div>
@@ -429,68 +429,15 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                 {/* Right Column - Budget & Spend (397px) */}
                 <div className="w-full lg:w-[397px] flex-shrink-0">
                   <div className="space-y-[18px]">
-                    {/* Budget & Spend Card */}
-                    <div className="bg-[rgba(255,255,255,0.6)] backdrop-blur-sm border border-[#e5e7eb] rounded-xl p-6">
-                      <h3 className="text-base font-semibold text-[#1f2933] mb-4">Trip total & Compliance</h3>
-                      
-                      <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-3xl font-normal text-[#0a0a0a]">
-                          {formatMoney(itinerary?.total_cost)}
-                        </span>
-                        {trip.total_budget ? (
-                          <span className="text-sm text-[#6a7282]">of {formatMoney(trip.total_budget)}</span>
-                        ) : null}
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="w-full h-2.5 bg-[rgba(3,2,19,0.2)] rounded-full mb-2 overflow-hidden">
-                        <div
-                          className={`h-full ${inPolicy ? "bg-gradient-to-r from-[#52c93f] to-[#18a0a6]" : "bg-gradient-to-r from-[#f5a623] to-[#e5484d]"}`}
-                          style={{
-                            width: `${Math.min(
-                              trip.total_budget && itinerary
-                                ? (itinerary.total_cost / trip.total_budget) * 100
-                                : 100,
-                              100,
-                            )}%`,
-                          }}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between gap-3 mb-4">
-                        <span className={`text-xs ${inPolicy ? "text-[#1F9D55]" : "text-[#b45309]"}`}>
-                          {itinerary?.policy_note ||
-                            (inPolicy ? "Your trip is fully compliant with policy" : "Review this trip against policy")}
-                        </span>
-                        <div className={`${inPolicy ? "bg-[#d1f4e0] text-[#52c93f]" : "bg-[#ffe9cc] text-[#b45309]"} rounded-full px-3 py-1 text-xs font-medium flex-shrink-0`}>
-                          {inPolicy ? "In policy" : "Review"}
-                        </div>
-                      </div>
-
-                      {/* Breakdown: planned cost, with filed expenses alongside */}
-                      <div className="space-y-3.5">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-[#4a5565]">Flights</span>
-                          <span className="font-normal text-[#1f2933]">{formatMoney(details.flight_cost)}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-[#4a5565]">Hotels</span>
-                          <span className="font-normal text-[#1f2933]">{formatMoney(details.hotel_cost)}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-[#4a5565]">Ground transportation</span>
-                          <span className="font-normal text-[#1f2933]">
-                            {formatMoney(expenseBy("ground transport"))} / {formatMoney(details.ground_transport_cost)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-[#4a5565]">Food</span>
-                          <span className="font-normal text-[#1f2933]">
-                            {formatMoney(expenseBy("food"))} / {formatMoney(details.food_cost)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    {/* Identical to the approval screen — same component,
+                        so the figure cannot drift between the two. Per-diems
+                        show what has actually been filed by now. */}
+                    <TripTotalsCard
+                      trip={trip}
+                      itinerary={itinerary}
+                      groundSpent={expenseBy("ground transport")}
+                      foodSpent={expenseBy("food")}
+                    />
 
                     {/* Payment method */}
                     <div className="bg-white border border-[#e5e7eb] rounded-xl p-6">
