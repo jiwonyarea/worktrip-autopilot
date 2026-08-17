@@ -73,7 +73,7 @@ export function TripTotalsCard({
       </h3>
 
       <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-3xl font-normal text-[#0a0a0a]">
+        <span className="text-3xl font-semibold text-[#0a0a0a]">
           {formatMoney(bookableTotal)}
         </span>
         {trip?.total_budget ? (
@@ -109,7 +109,7 @@ export function TripTotalsCard({
       <div className="space-y-3.5">
         <div className="flex items-center justify-between text-sm">
           <span className="text-[#4a5565]">Flights</span>
-          <span className="font-normal text-[#1f2933]">
+          <span className="font-medium text-[#1f2933]">
             {formatMoney(details.flight_cost)}
           </span>
         </div>
@@ -117,7 +117,7 @@ export function TripTotalsCard({
           <span className="text-[#4a5565]">
             Hotels ({nights} night{nights === 1 ? "" : "s"})
           </span>
-          <span className="font-normal text-[#1f2933]">
+          <span className="font-medium text-[#1f2933]">
             {formatMoney(details.hotel_cost)}
           </span>
         </div>
@@ -125,14 +125,14 @@ export function TripTotalsCard({
             a per-diem until receipts come in. */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-[#4a5565]">Ground Transportation</span>
-          <span className="font-normal text-[#1f2933]">
+          <span className="font-medium text-[#1f2933]">
             {formatMoney(groundSpent)}{" "}
             <span className="text-[#9095a1]">/ {formatMoney(groundBudget)}</span>
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-[#4a5565]">Food</span>
-          <span className="font-normal text-[#1f2933]">
+          <span className="font-medium text-[#1f2933]">
             {formatMoney(foodSpent)}{" "}
             <span className="text-[#9095a1]">/ {formatMoney(foodBudget)}</span>
           </span>

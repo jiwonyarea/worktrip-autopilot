@@ -173,6 +173,8 @@ export interface Expense {
   traveler: string;
   receipt_url: string | null;
   policy_status: string;
+  /** "agent" for the flight and hotel it booked; "manual" for uploads. */
+  source?: "agent" | "manual";
 }
 
 /** List expenses filed against a trip, newest first. */

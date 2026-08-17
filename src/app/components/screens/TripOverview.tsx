@@ -8,7 +8,6 @@ import {
   Plane,
   Hotel,
   CheckCircle,
-  X,
   ChevronRight,
   Filter,
   Upload,
@@ -43,7 +42,6 @@ interface TripOverviewProps {
 
 export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, selectedItineraryId }: TripOverviewProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "expenses">("overview");
-  const [showSuccessBanner, setShowSuccessBanner] = useState(true);
   // Motion loops are JS-driven, so the CSS reduced-motion rule cannot reach them.
   const reduceMotion = useReducedMotion();
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -137,10 +135,10 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Main content */}
-      <div className="relative max-w-[1088px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="relative max-w-[1088px] mx-auto px-4 sm:px-6 lg:px-8 pt-[60px] pb-8">
         {/* The agent speaking, in the same voice it used while planning —
             a sparkle and two lines, not a green success box. */}
-        {showSuccessBanner && (
+        {isBooked && (
           <div className="mb-6 flex items-start gap-3">
             <motion.div
               animate={
@@ -159,13 +157,6 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                 Your confirmation will be sent to your inbox
               </p>
             </div>
-            <button
-              onClick={() => setShowSuccessBanner(false)}
-              className="flex-shrink-0 text-[#9095a1] hover:text-[#1f2933] transition-colors p-1.5 rounded-md"
-              aria-label="Dismiss"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         )}
 
@@ -183,7 +174,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
           purpose={trip.purpose}
           chip={
             <div
-              className={`${isBooked ? "bg-[#dafbe8]" : "bg-[#D4E9FF]"} rounded-full px-3 py-1 flex items-center justify-center`}
+              className={`${isBooked ? "bg-[#dafbe8] border-[#a6e5bd]" : "bg-[#D4E9FF] border-[#a8c8f0]"} border rounded-full px-3 py-1 flex items-center justify-center`}
             >
               <span
                 className={`font-medium text-[12px] leading-[16px] ${isBooked ? "text-[#4dc13a]" : "text-[#1246A5]"}`}
@@ -488,10 +479,10 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
           {activeTab === "expenses" && (
             <div className="p-6 min-h-[800px]">
               {/* Info banner */}
-              <div className="mb-6 bg-[rgba(18,70,165,0.1)] border border-[rgba(18,70,165,0.2)] rounded-xl p-4 flex items-start gap-3">
-                <Info className="w-5 h-5 text-[#1246a5] flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-[#1f2933]">
-                  Upload receipts to automatically extract expense details using AI. The system will capture merchant, amount, date, and categorize each expense.
+              <div className="mb-6 bg-[rgba(18,70,165,0.1)] border border-[rgba(18,70,165,0.2)] rounded-xl px-4 py-3 flex items-center gap-3">
+                <Info className="w-4 h-4 text-[#1246a5] flex-shrink-0" />
+                <p className="text-xs text-[#1f2933] m-0 min-w-0">
+                  Upload a receipt and the agent reads the merchant, amount, and date, then categorises it.
                 </p>
               </div>
 
@@ -565,7 +556,15 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                                     ${Number(expense.amount ?? 0).toFixed(2)}
                                   </td>
                                   <td className="py-3 px-4">
-                                    {expense.receipt_url ? (
+                                    {expense.source === "agent" ? (
+                                      <span
+                                        className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(145,106,245,0.1)] border border-[rgba(145,106,245,0.25)] px-2 py-1 text-xs text-[#6b47c4] whitespace-nowrap"
+                                        title="Booked and filed by Worktrip Autopilot"
+                                      >
+                                        <Sparkles className="w-3 h-3 fill-current" />
+                                        Filed by Autopilot
+                                      </span>
+                                    ) : expense.receipt_url ? (
                                       <a
                                         href={expense.receipt_url}
                                         target="_blank"

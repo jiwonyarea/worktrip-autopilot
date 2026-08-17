@@ -276,15 +276,6 @@ export function EditItineraryinDetail({
                 </div>
               </div>
 
-              {/* Total Cost */}
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#e6e6e6]">
-                <p className="text-sm text-[#364153]">
-                  Total cost ({travelers} traveler{travelers === 1 ? "" : "s"})
-                </p>
-                <p className="text-2xl sm:text-[30px] font-semibold text-[#0a0a0a] leading-tight sm:leading-9">
-                  {formatMoney(bookableTotal)}
-                </p>
-              </div>
 
               {/* Departure day. A single rail runs the full height of the day
                   and the content is indented past it, so no card covers it. */}
@@ -378,13 +369,15 @@ export function EditItineraryinDetail({
                     </div>
 
                     <div className="pt-3 border-t border-[#e5e7eb]">
-                      <p className="text-xs text-[#6a7282] flex items-start gap-1.5 m-0">
+                      <p className="text-xs leading-none text-[#6a7282] flex items-center gap-1.5 m-0">
                         <CalendarCheck
-                          className="w-3.5 h-3.5 mt-px flex-shrink-0"
+                          className="w-3.5 h-3.5 flex-shrink-0"
                           strokeWidth={1.75}
                           aria-hidden
                         />
-                        <span>Free cancellation up to 24 hours before check-in</span>
+                        <span className="leading-none">
+                          Free cancellation up to 24 hours before check-in
+                        </span>
                       </p>
                     </div>
                   </div>

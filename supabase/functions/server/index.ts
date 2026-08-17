@@ -462,6 +462,61 @@ api.post("/trips/:tripId/generate-itineraries", async (c) => {
   }
 });
 
+/**
+ * File the two things the agent books as expenses against the trip.
+ *
+ * Idempotent: confirming twice (the booking screen offers a retry) must not
+ * double-file, so an existing agent row for the trip short-circuits.
+ */
+async function fileAgentExpenses(tripId: string, trip: any, itinerary: any) {
+  const db = serviceClient();
+
+  const { data: existing } = await db
+    .from("expenses")
+    .select("id")
+    .eq("trip_id", tripId)
+    .eq("source", "agent")
+    .limit(1);
+
+  if (existing && existing.length > 0) return;
+
+  const details = itinerary?.details ?? {};
+  const organizer = trip?.organizer_name ?? "Organizer";
+
+  // "Delta · DL 5788 · PIT to JFK · 07:23 - 09:00" -> "Delta"
+  const airline = String(details.outbound_flight ?? "").split("·")[0].trim();
+
+  const rows = [
+    {
+      merchant: airline || "Airline",
+      amount: Number(details.flight_cost ?? 0),
+      date: trip?.start_date ?? null,
+      category: "Flights",
+    },
+    {
+      merchant: details.hotel_name || "Hotel",
+      amount: Number(details.hotel_cost ?? 0),
+      date: trip?.start_date ?? null,
+      category: "Hotel",
+    },
+  ].filter((r) => r.amount > 0);
+
+  if (rows.length === 0) return;
+
+  const { error } = await db.from("expenses").insert(
+    rows.map((r) => ({
+      ...r,
+      trip_id: tripId,
+      traveler: organizer,
+      receipt_url: null,
+      policy_status: itinerary?.compliance === "out_of_policy" ? "review" : "compliant",
+      source: "agent",
+    })),
+  );
+
+  if (error) throw new Error(error.message);
+}
+
 api.post("/trips/:tripId/confirm-booking", async (c) => {
   try {
     const tripId = c.req.param("tripId");
@@ -503,6 +558,15 @@ api.post("/trips/:tripId/confirm-booking", async (c) => {
     };
     await kv.set(`trip:${tripId}`, updated);
 
+    // The agent just booked the flight and the hotel, so it files them itself.
+    // Waiting for the traveller to upload receipts for spend the agent placed
+    // would leave the expense sheet claiming nothing had been paid.
+    await fileAgentExpenses(tripId, trip, selected).catch((err) => {
+      // A failed insert must not undo a confirmed booking; the trip is already
+      // saved and the expenses can be added by hand.
+      console.error("auto-filing booked expenses failed:", err);
+    });
+
     return c.json({ trip: updated, confirmations, message: "Trip confirmed" });
   } catch (error) {
     console.error("confirm-booking failed:", error);
@@ -542,6 +606,7 @@ api.post("/trips/:tripId/expenses", async (c) => {
         traveler: body.traveler ?? "Unknown",
         receipt_url: body.receipt_url ?? null,
         policy_status: body.policy_status ?? "compliant",
+        source: "manual",
       })
       .select()
       .single();
