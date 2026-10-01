@@ -186,11 +186,17 @@ export async function searchHotels(opts: {
     adults: String(Math.max(opts.adults, 1)),
     currency: "USD",
     hl: "en",
+    // Business travelers don't stay in hostels or unrated rooms, so only ask
+    // for star-classed hotels. 2-3 star is the floor the budget option uses.
+    hotel_class: "2,3,4,5",
   });
 
   if (!json) return [];
 
   return (json.properties ?? [])
+    // Backstop for the class filter: vacation rentals and anything that calls
+    // itself a hostel still slip through occasionally.
+    .filter((p: any) => (p.type ?? "hotel") === "hotel" && !/hostel/i.test(p.name ?? ""))
     .slice(0, 20)
     .map((p: any): HotelOffer => ({
       name: p.name ?? "Hotel",

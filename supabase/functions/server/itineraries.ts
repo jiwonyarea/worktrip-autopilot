@@ -20,6 +20,29 @@ import {
   synthesizeItineraries,
 } from "./claude.ts";
 
+// Worktrip's own travel policy. Real corporate travel always has a cap, so
+// when the organiser states no figure the agent plans against this standard
+// instead of reporting that no budget exists — which reads to the organiser
+// like the product has nothing to say. Per person, USD.
+const STANDARD_POLICY = {
+  airfare_short_haul: 700,
+  airfare_long_haul: 1900,
+  hotel_per_night: 260,
+  incidentals_per_day: 120,
+};
+
+/** The standard per-person cap for a trip of this length and reach. */
+function standardBudgetPerPerson(nights: number, longHaul: boolean): number {
+  const airfare = longHaul
+    ? STANDARD_POLICY.airfare_long_haul
+    : STANDARD_POLICY.airfare_short_haul;
+  return (
+    airfare +
+    STANDARD_POLICY.hotel_per_night * nights +
+    STANDARD_POLICY.incidentals_per_day * nights
+  );
+}
+
 const DEFAULT_PREFERENCES = {
   airport_flexibility: "home_only",
   departure_time_pref: "morning",
@@ -213,12 +236,26 @@ export async function searchInventory(tripId: string) {
       traveler_count: travelerCount,
       original_request: trip.intent_text ?? null,
     },
-    policy: {
-      total_budget: trip.total_budget ?? null,
-      budget_per_person: trip.budget_per_person ?? null,
-      guidelines: trip.policy_guidelines ?? null,
-      autonomy_level: trip.autonomy_level ?? "suggest_only",
-    },
+    policy: (() => {
+      const standard = standardBudgetPerPerson(nights, airports.long_haul);
+      const statedPerPerson = trip.budget_per_person ?? null;
+      const statedTotal = trip.total_budget ?? null;
+      const perPerson =
+        statedPerPerson ??
+        (statedTotal ? Math.round(statedTotal / travelerCount) : standard);
+
+      return {
+        total_budget: statedTotal ?? perPerson * travelerCount,
+        budget_per_person: perPerson,
+        // The agent is told never to report a missing budget; this says
+        // whether the cap came from the organiser or from our own policy.
+        budget_source:
+          statedPerPerson || statedTotal ? "organiser_stated" : "company_standard",
+        standard_caps: STANDARD_POLICY,
+        guidelines: trip.policy_guidelines ?? null,
+        autonomy_level: trip.autonomy_level ?? "suggest_only",
+      };
+    })(),
     travelers: travelersWithPreferences,
     available_outbound_flights: flights.outboundOptions,
     available_return_flights: flights.returnOptions,

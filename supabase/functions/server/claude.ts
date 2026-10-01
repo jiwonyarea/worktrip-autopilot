@@ -148,6 +148,12 @@ const AIRPORTS_SCHEMA = {
       type: "number",
       description: "Longitude of the destination's downtown/city centre",
     },
+    long_haul: {
+      type: "boolean",
+      description:
+        "True when the route crosses an ocean or normally takes more than " +
+        "about six hours in the air. Sets which standard airfare cap applies.",
+    },
   },
   required: [
     "origin_iata",
@@ -156,6 +162,7 @@ const AIRPORTS_SCHEMA = {
     "destination_confident",
     "destination_center_lat",
     "destination_center_lon",
+    "long_haul",
   ],
   additionalProperties: false,
 } as const;
@@ -167,6 +174,7 @@ export interface ResolvedAirports {
   destination_confident: boolean;
   destination_center_lat: number;
   destination_center_lon: number;
+  long_haul: boolean;
 }
 
 /**
@@ -389,9 +397,24 @@ const ITINERARY_SCHEMA = {
         rationale: {
           type: "string",
           description:
-            "2-3 sentences for a 'Why these options?' note: the policy limits " +
-            "applied, what was prioritised, and anything that constrained the " +
-            "search. Written to the organiser.",
+            "The 'Why these options?' note under the three cards. Two " +
+            "sentences, 45 words at the very most, written to the organiser " +
+            "as 'you'.\n" +
+            "Say what actually shaped this set: the one constraint that drove " +
+            "the search (a stated preference, the dates, what inventory " +
+            "existed on the route) and the trade-off it forced across the " +
+            "three. Open on the specific thing — a time, a price gap, a " +
+            "preference someone gave.\n" +
+            "Good: 'Every non-stop out of PIT lands after 18:00, so the " +
+            "cheaper two both cost you the first evening. Time Saver buys " +
+            "that evening back for $340.'\n" +
+            "Bad: 'Based on your preferences and the available inventory, " +
+            "these three options balance cost and convenience.' — it says " +
+            "nothing this trip could not.\n" +
+            "Never mention what was missing, unstated, unavailable, or " +
+            "assumed: the organiser cannot act on it and it reads as an " +
+            "excuse. Never name the budget figure — the cards already carry " +
+            "the numbers.",
         },
       },
       required: ["ground_transport_per_day", "food_per_day", "rationale"],
@@ -424,7 +447,8 @@ export async function synthesizeItineraries(
       "organizer can compare side by side:\n" +
       "- balanced: the best overall tradeoff of cost, travel time, and comfort\n" +
       "- premium: prioritizes time and comfort (direct flights, closer hotel)\n" +
-      "- budget: minimizes cost while staying workable\n\n" +
+      "- budget: minimizes cost while staying workable — a 2 or 3 star hotel, " +
+      "never a hostel, shared room, or unrated property\n\n" +
       "Rules:\n" +
       "- Use ONLY the flights and hotels provided. Never invent an airline, flight " +
       "number, hotel, or price. If inventory is thin, reuse an option and say so " +
@@ -435,6 +459,11 @@ export async function synthesizeItineraries(
       "are estimates.\n" +
       "- Set policy_compliant false when total_cost exceeds the stated budget, and " +
       "explain the overage in policy_note.\n" +
+      "- A budget is ALWAYS present. When policy.budget_source is " +
+      "'company_standard' it is Worktrip's own travel policy rather than a " +
+      "figure the organiser typed — plan against it exactly as you would a " +
+      "stated one. Never write that no budget, cap, or limit was given, in " +
+      "any field.\n" +
       "- Honor traveler preferences (departure time, comfort-vs-cost, hotel " +
       "distance, accessibility, dietary needs) and reflect them in " +
       "preference_satisfaction_score (0-100).",
