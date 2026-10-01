@@ -15,7 +15,16 @@ import {
 } from "lucide-react";
 import { Trip, getTrip } from "../../utils/tripApi";
 import { TripSummaryCard } from "../TripSummaryCard";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../ui/accordion";
 import { AirlineLogo } from "../AirlineLogo";
+import { Typewriter } from "../Typewriter";
+import { AnimatedMoney } from "../AnimatedMoney";
+import { ItinerarySkeleton } from "../ItinerarySkeleton";
 import { parseFlight, formatMoney, nightsBetween } from "../../utils/itinerary";
 import svgPaths from "../../imports/svg-26i6mfklc7";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
@@ -39,14 +48,11 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
   const [hotelImages, setHotelImages] = useState<string[]>([]);
   const reduceMotion = useReducedMotion();
 
-  // Function to switch itinerary option and navigate
+  // Choosing hands straight over. An exit animation here only delayed the
+  // screen the organiser had just asked for, on top of the page cross-fade.
   const handleSwitchOption = (optionId: string) => {
     setSelectedItineraryId(optionId);
-
-    // Hand the choice to the next screen — it renders this exact option.
-    if (onEditItinerary) {
-      onEditItinerary(optionId);
-    }
+    onEditItinerary?.(optionId);
   };
 
   // Fetch random hotel images on mount
@@ -104,13 +110,11 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/70 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl mb-4">
-            <Loader2 className="w-8 h-8 text-[#916AF5] animate-spin" />
-          </div>
-          <p className="text-gray-700">Loading itineraries...</p>
-        </div>
+      <div
+        className="min-h-screen relative bg-cover bg-center bg-no-repeat pb-16"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      >
+        <ItinerarySkeleton />
       </div>
     );
   }
@@ -192,16 +196,18 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
             <h1 className="font-display font-medium text-[20px] leading-tight text-[#0a0a0a] m-0">
               Choose your itinerary
             </h1>
-            <p className="text-[14px] font-normal text-[#4a5565] m-0 mt-1">
-              WorkTrip Autopilot found {sortedItineraries.length} options that match your
-              preferences and policy
-            </p>
+            {/* The agent reporting back. Only this line types — the title is
+                the page's name, not something the agent just said. */}
+            <Typewriter
+              className="block text-[14px] font-normal text-[#4a5565] mt-1"
+              text={`WorkTrip Autopilot found ${sortedItineraries.length} options that match your preferences and policy`}
+            />
           </div>
         </div>
 
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 mb-6 text-[#9095a1] hover:text-[#6d6788] transition-colors text-sm"
+          className="inline-flex items-center gap-1.5 mb-6 -ml-2 px-2 py-1.5 rounded-[8px] text-[#4a5565] hover:text-[#1f2933] hover:bg-white/70 transition-colors text-sm"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>Back to search</span>
@@ -219,7 +225,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
           actions={
             <button
               onClick={onEditTrip}
-              className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+              className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#C7BCEB] bg-white text-[#916AF5] text-[14px] font-medium shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] hover:bg-[#F2F1F8] hover:border-[#916AF5] transition-colors"
             >
               Edit
             </button>
@@ -233,21 +239,47 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
             const bookable = (d.flight_cost || 0) + (d.hotel_cost || 0);
             const outbound = parseFlight(d.outbound_flight);
             const inbound = parseFlight(d.return_flight);
+            const highlights: any[] = option.highlights ?? [];
+            // The agent's own pick, badged so the default choice is visible.
+            const isRecommended = option.option_label === "balanced";
             return (
-              <div
+              // Each option settles in just behind the one before it, so the
+              // three read as results arriving rather than a page redrawing.
+              <motion.div
                 key={option.id}
+                initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.25, delay: 0.15 * index, ease: "easeOut" },
+                }}
                 className="bg-white/70 backdrop-blur-xl rounded-[24px] border border-white/50 shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.08)] p-5 flex flex-col"
               >
                 {/* Direction, then price. The direction is what this page asks
                     the organiser to choose between. */}
                 <div className="mb-3">
                   <div className="min-w-0">
-                    <h3 className="text-[16px] font-semibold text-[#1f2933] m-0">
-                      {LABELS[option.option_label] ?? option.title}
-                    </h3>
-                    <p className="text-[24px] font-semibold text-[#101828] m-0 leading-[32px]">
-                      {formatMoney(bookable)}
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-[16px] font-semibold text-[#1f2933] m-0">
+                        {LABELS[option.option_label] ?? option.title}
+                      </h3>
+                      {isRecommended && (
+                        // One pulse as it lands, then still. A badge that keeps
+                        // moving stops being a label and becomes an advert.
+                        <motion.span
+                          initial={reduceMotion ? false : { scale: 1 }}
+                          animate={reduceMotion ? undefined : { scale: [1, 1.15, 1] }}
+                          transition={{ duration: 0.4, delay: 0.55, ease: "easeInOut" }}
+                          className="px-2.5 py-[4px] rounded-full bg-[#916AF5] text-white text-[11px] font-medium leading-none"
+                        >
+                          Recommended
+                        </motion.span>
+                      )}
+                    </div>
+                    <AnimatedMoney
+                      value={bookable}
+                      className="block text-[24px] font-semibold text-[#101828] leading-[32px]"
+                    />
                   </div>
                 </div>
 
@@ -272,7 +304,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
                       {leg ? (
                         <div className="flex items-center gap-3">
                           <div className="bg-white rounded-[8px] w-10 h-10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            <AirlineLogo flight={raw} alt={leg.airline} size={30} />
+                            <AirlineLogo flight={raw} alt={leg.airline} size={24} fill />
                           </div>
                           <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -337,9 +369,17 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
                   </div>
                 </div>
 
-                {/* What actually separates this option from the others. */}
+                {/* What actually separates this option from the others —
+                    upsides and costs in one list, the way the agent weighed
+                    them. */}
                 <div className="flex flex-col gap-2 mb-[48px]">
-                  {(option.highlights ?? []).map((h: any, i: number) => (
+                  {highlights.length > 0 && (
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Sparkles className="w-4 h-4 text-[#916AF5]" strokeWidth={1.75} aria-hidden />
+                      <p className="text-[14px] font-semibold text-[#101828] m-0">Agent Notes</p>
+                    </div>
+                  )}
+                  {highlights.map((h: any, i: number) => (
                     <div key={i} className="flex items-start gap-2">
                       {h.type === "con" ? (
                         <Minus className="w-4 h-4 text-[#b45309] flex-shrink-0 mt-0.5" strokeWidth={2} />
@@ -353,11 +393,11 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
 
                 <button
                   onClick={() => handleSwitchOption(option.id)}
-                  className="mt-auto w-full h-[44px] rounded-[8px] bg-[#E9E7EF] text-[#1f2933] text-[18px] font-normal hover:bg-[#ddd0ff] transition-colors"
+                  className="mt-auto w-full h-[44px] rounded-[8px] bg-[#E9E7EF] text-[#1f2933] text-[18px] font-normal hover:bg-[#916AF5] hover:text-white transition-colors"
                 >
                   Continue
                 </button>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -366,7 +406,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
             outside the comparison rather than repeating three times. */}
         {policy && (
           <div className="mt-10">
-            <h2 className="text-[14px] font-semibold text-[#1f2933] m-0 mb-[14px]">
+            <h2 className="text-[18px] font-semibold text-[#1f2933] m-0 mb-[14px]">
               Included in all options (set by company policy)
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -411,12 +451,29 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
         {/* The agent explaining itself. */}
         {policy?.rationale && (
           <div className="mt-10">
-            <h2 className="text-[14px] font-semibold text-[#1f2933] m-0 mb-[14px]">
-              Why these options?
-            </h2>
-            <p className="text-[14px] text-[#4a5565] leading-relaxed m-0">
-              {policy.rationale}
-            </p>
+            <Accordion
+              type="single"
+              collapsible
+              className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.06)] px-5"
+            >
+              <AccordionItem value="why" className="border-b-0">
+                <AccordionTrigger className="py-5 hover:no-underline">
+                  <span className="flex items-center gap-2 text-[18px] font-semibold text-[#1f2933]">
+                    <Sparkles
+                      className="w-[18px] h-[18px] text-[#916AF5] flex-shrink-0"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                    Why these options?
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-5 pr-6">
+                  <p className="text-[14px] text-[#4a5565] leading-relaxed m-0">
+                    {policy.rationale}
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         )}
       </div>

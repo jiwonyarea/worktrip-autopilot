@@ -1,4 +1,6 @@
-import { Check, Loader2, Sparkles, AlertCircle, MessagesSquare, Plane, Hotel, ClipboardList, Layers } from "lucide-react";
+import { Typewriter } from "../Typewriter";
+import { StepTrack } from "../StepTrack";
+import { Loader2, Sparkles, AlertCircle, MessagesSquare, Plane, Hotel, ClipboardList, Layers } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Trip, getTrip, generateItineraries, searchInventory, InventorySummary } from "../../utils/tripApi";
@@ -142,9 +144,15 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
           <h1 className="font-display font-medium text-[28px] sm:text-[36px] leading-tight text-[#0A0A0A] m-0">
             {error ? "Planning failed" : "Autopilot is working on your trip"}
           </h1>
-          <p className="mt-3 text-[14px] font-normal text-[#4A4A4A] m-0">
-            {error ? error : "This may take a minute to offer best options..."}
-          </p>
+          {/* An error is not the agent talking — it appears at once. */}
+          {error ? (
+            <p className="mt-3 text-[14px] font-normal text-[#4A4A4A] m-0">{error}</p>
+          ) : (
+            <Typewriter
+              className="block mt-3 text-[14px] font-normal text-[#4A4A4A]"
+              text="This may take a minute to offer best options..."
+            />
+          )}
         </div>
 
         {/* Error state with retry button */}
@@ -170,67 +178,7 @@ export function AgentWorkingSimple({ onComplete, tripData }: AgentWorkingSimpleP
           </div>
         )}
 
-        {/* Planning steps as a horizontal timeline: five nodes on one track,
-            filling left to right as each stage completes. */}
-        <div className="w-full p-[20px]">
-          <div className="flex items-start w-full">
-            {planningSteps.map((step, index) => {
-              const isComplete = currentStep > step.id;
-              const isActive = currentStep === step.id;
-
-              return (
-                <div key={step.id} className="flex-1 min-w-0 flex flex-col items-center relative">
-                  {/* Connector back to the previous node. Drawn behind the
-                      circles and coloured by whether that leg is done. */}
-                  {index > 0 && (
-                    <div className="absolute top-[17px] right-1/2 left-[-50%] h-[2px] -z-0">
-                      <div className="w-full h-full bg-[#E5E7EB]" />
-                      <motion.div
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: currentStep >= step.id ? 1 : 0 }}
-                        transition={{ duration: 0.5 }}
-                        style={{ transformOrigin: "left" }}
-                        className="w-full h-full bg-[#916AF5] -mt-[2px]"
-                      />
-                    </div>
-                  )}
-
-                  <div
-                    className={`relative z-10 w-[36px] h-[36px] rounded-full flex items-center justify-center transition-colors ${
-                      isComplete
-                        ? "bg-[#916AF5]"
-                        : isActive
-                          ? "bg-[#EEE9FD] border-2 border-[#916AF5]"
-                          : "bg-white border-2 border-[#E5E7EB]"
-                    }`}
-                  >
-                    {isComplete ? (
-                      <Check className="w-[18px] h-[18px] text-white" strokeWidth={1.75} />
-                    ) : isActive ? (
-                      // A single dot breathing in place — quieter than a
-                      // spinner, and it reads as a pulse rather than waiting.
-                      <motion.span
-                        className="w-[10px] h-[10px] rounded-full bg-[#916AF5]"
-                        animate={reduceMotion ? undefined : { scale: [1, 1.55, 1], opacity: [0.85, 1, 0.85] }}
-                        transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-                      />
-                    ) : (
-                      <step.Icon className="w-[18px] h-[18px] text-[#9095a1]" strokeWidth={1.75} />
-                    )}
-                  </div>
-
-                  <p
-                    className={`mt-3 px-1 text-[12px] leading-tight text-center m-0 transition-colors ${
-                      isComplete || isActive ? "text-[#4a5565] font-medium" : "text-[#9095a1]"
-                    }`}
-                  >
-                    {step.label}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <StepTrack steps={planningSteps} currentStep={currentStep} />
 
         {/* What the search actually returned. Turns the wait into evidence the
             agent is doing real work rather than a decorative loader. */}

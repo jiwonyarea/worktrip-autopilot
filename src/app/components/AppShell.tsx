@@ -1,4 +1,4 @@
-import { User, Settings } from "lucide-react";
+import { User } from "lucide-react";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
 import gnbLogo from "../../assets/brand/worktrip-autopilot-gnb.svg";
 
@@ -50,10 +50,16 @@ export function AppShell({ children, currentNav = "Trips", onNavChange, onLogoCl
         </div>
 
         <div className="flex items-center">
-          <button className="flex items-center gap-2 p-1 rounded-full hover:bg-white/50 transition-all">
-            <div className="w-8 h-8 rounded-full bg-[#9CA3AF] flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
-            </div>
+          {/* The avatar was a grey disc, the one element on the bar that
+              belonged to no palette. Purple ties it to the primary action. */}
+          <button
+            type="button"
+            aria-label="Account"
+            className="group flex items-center gap-2 p-1 rounded-full transition-all hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#916AF5]/45"
+          >
+            <span className="w-9 h-9 rounded-full bg-gradient-to-br from-[#A78BFA] to-[#916AF5] flex items-center justify-center transition-transform group-hover:scale-105">
+              <User className="w-[18px] h-[18px] text-white" strokeWidth={1.75} />
+            </span>
           </button>
         </div>
       </header>

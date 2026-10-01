@@ -8,6 +8,8 @@ import { Trip, DemoTrip, DemoCatalog, createTrip, updateTrip, parseIntentText, g
 import { motion } from "motion/react";
 import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
 import { formatDateRange } from "../../utils/itinerary";
+import { Reveal } from "../Reveal";
+import { Typewriter } from "../Typewriter";
 import { TripSummaryCard } from "../TripSummaryCard";
 import { Calendar as CalendarPicker } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -318,7 +320,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Content Container */}
-      <div className="relative z-10 max-w-[1088px] mx-auto px-4 sm:px-6 pt-16 sm:pt-[112px]">
+      <div className="relative z-10 max-w-[1088px] mx-auto px-4 sm:px-6 pt-16 sm:pt-[112px] pb-[120px]">
         {/* Centered Worktrip Autopilot Logo */}
         <div className="text-center mb-8">
           <img
@@ -326,9 +328,10 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
             alt="Worktrip Autopilot"
             className="inline-block w-[244px] max-w-full h-auto"
           />
-          <p className="mt-4 text-[14px] font-normal text-[#4a5565] m-0">
-            Plan itineraries that fit your company's travel policy
-          </p>
+          <Typewriter
+            className="block mt-4 text-[14px] font-normal text-[#4a5565]"
+            text="Plan itineraries that fit your company's travel policy"
+          />
         </div>
 
         {/* Main Search Bar */}
@@ -610,8 +613,8 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
             full sentence, so the agent still gets dates and traveler counts. */}
         <div className="flex flex-wrap justify-center gap-3 mb-[60px]">
           {INTENT_SUGGESTIONS.map((suggestion, index) => (
+            <Reveal key={index} delay={index * 100} className="w-full sm:w-auto">
             <button
-              key={index}
               onClick={() => handleSuggestionClick(suggestion.text)}
               title={suggestion.text}
               className="bg-white/60 backdrop-blur-sm border border-[#D8D3E5] rounded-full hover:bg-white/80 transition-all w-full sm:w-[280px] h-[40px] px-[18px] py-[10px] flex items-center gap-2 text-left"
@@ -621,12 +624,13 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                 {suggestion.label}
               </span>
             </button>
+            </Reveal>
           ))}
         </div>
 
         {/* Recent Trips. These are the pre-generated demo trips, so opening
             one costs nothing and works even when the daily quota is spent. */}
-        <div className="max-w-[800px] mx-auto">
+        <Reveal className="max-w-[800px] mx-auto">
           <div className="flex items-baseline justify-between gap-4 mb-[14px]">
             <h2 className="text-[14px] font-semibold text-[#1f2933] m-0">Recent Trips</h2>
             {quota && !quota.available && (
@@ -652,14 +656,14 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
           )}
 
           <div className="flex flex-col gap-[14px]">
-            {demoTrips.slice(0, 2).map((demo) => {
+            {demoTrips.slice(0, 2).map((demo, index) => {
               // A trip that has finished is only kept for its expense record:
               // no countdown to show, and the action is filing receipts.
               const daysAway = daysUntil(demo.start_date);
               const hasEnded = (daysUntil(demo.end_date) ?? 0) < 0;
               return (
+                <Reveal key={demo.trip_id} delay={index * 100}>
                 <TripSummaryCard
-                  key={demo.trip_id}
                   className="h-[90px]"
                   name={demo.label}
                   destination={demo.destination}
@@ -678,7 +682,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                     <>
                       <button
                         onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                        className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+                        className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#C7BCEB] bg-white text-[#916AF5] text-[14px] font-medium shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] hover:bg-[#F2F1F8] hover:border-[#916AF5] transition-colors"
                       >
                         View
                       </button>
@@ -692,7 +696,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                       ) : (
                         <button
                           onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                          className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+                          className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#C7BCEB] bg-white text-[#916AF5] text-[14px] font-medium shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] hover:bg-[#F2F1F8] hover:border-[#916AF5] transition-colors"
                         >
                           Edit
                         </button>
@@ -700,10 +704,11 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                     </>
                   }
                 />
+                </Reveal>
               );
             })}
           </div>
-        </div>
+        </Reveal>
       </div>
 
       <style>{`

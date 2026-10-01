@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { formatMoney, nightsBetween } from "../utils/itinerary";
+import { AnimatedMoney } from "./AnimatedMoney";
 
 // The trip's money and policy standing. Shared by the itinerary edit screen and
 // the booked trip overview so approving a trip and looking at it afterwards
@@ -6,27 +8,31 @@ import { formatMoney, nightsBetween } from "../utils/itinerary";
 
 // Three states rather than a boolean: editing a flight or hotel can move a trip
 // from compliant to needing a look without putting it out of policy.
+//
+// Each state is one flat colour, the same one its chip carries. The bar used to
+// run a gradient, which read as decoration and implied the colour meant
+// something along its length — it does not; only where it stops does.
 const COMPLIANCE = {
   compliant: {
     line: "Your trip is fully compliant with policy",
     chip: "In policy",
     text: "text-[#1F9D55]",
-    chipClass: "bg-[#d1f4e0] text-[#52c93f]",
-    bar: "bg-gradient-to-r from-[#52c93f] to-[#18a0a6]",
+    chipClass: "bg-[#eef9f2] text-[#52c93f]",
+    bar: "bg-[#3DC616]",
   },
   review_required: {
     line: "Your trip requires a review",
     chip: "Review",
     text: "text-[#b45309]",
     chipClass: "bg-[#ffe9cc] text-[#b45309]",
-    bar: "bg-gradient-to-r from-[#f5a623] to-[#f5a623]",
+    bar: "bg-[#f5a623]",
   },
   out_of_policy: {
     line: "Out of compliance with company policy",
     chip: "Action needed",
     text: "text-[#c02626]",
     chipClass: "bg-[#ffe0e0] text-[#c02626]",
-    bar: "bg-gradient-to-r from-[#f5a623] to-[#e5484d]",
+    bar: "bg-[#c02626]",
   },
 } as const;
 
@@ -64,6 +70,30 @@ export function TripTotalsCard({
         : "compliant";
   const compliance = COMPLIANCE[state];
 
+  const pct = Math.min(
+    trip?.total_budget ? (bookableTotal / trip.total_budget) * 100 : 100,
+    100,
+  );
+
+  // The bar draws itself on arrival rather than appearing already full, so the
+  // figure above it and the bar below it tell the same story at the same pace.
+  // After that first fill, width changes are ordinary edits.
+  const [filled, setFilled] = useState(false);
+  useEffect(() => {
+    // Two frames, not one: the first commits the zero width to the DOM, the
+    // second changes it. Flipping it inside a single frame lets the browser
+    // collapse both into one paint, and the bar simply appears full — which
+    // is what was happening.
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setFilled(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, []);
+
   return (
     <div
       className={`bg-[rgb(255,255,255)] backdrop-blur-sm border border-[#e5e7eb] rounded-xl p-6 ${className}`}
@@ -73,9 +103,10 @@ export function TripTotalsCard({
       </h3>
 
       <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-3xl font-semibold text-[#0a0a0a]">
-          {formatMoney(bookableTotal)}
-        </span>
+        <AnimatedMoney
+          value={bookableTotal}
+          className="text-3xl font-semibold text-[#0a0a0a]"
+        />
         {trip?.total_budget ? (
           <span className="text-sm text-[#6a7282]">
             of {formatMoney(trip.total_budget)}
@@ -83,14 +114,12 @@ export function TripTotalsCard({
         ) : null}
       </div>
 
-      <div className="w-full h-2.5 bg-[rgba(3,2,19,0.2)] rounded-full mb-2 overflow-hidden">
+      <div className="w-full h-2.5 bg-[#eceef2] rounded-full mb-2 overflow-hidden">
         <div
-          className={`h-full ${compliance.bar}`}
+          className={`h-full rounded-full ${compliance.bar}`}
           style={{
-            width: `${Math.min(
-              trip?.total_budget ? (bookableTotal / trip.total_budget) * 100 : 100,
-              100,
-            )}%`,
+            width: `${filled ? pct : 0}%`,
+            transition: "width 900ms cubic-bezier(0.16, 1, 0.3, 1), background-color 300ms ease",
           }}
         />
       </div>
@@ -109,17 +138,13 @@ export function TripTotalsCard({
       <div className="space-y-3.5">
         <div className="flex items-center justify-between text-sm">
           <span className="text-[#4a5565]">Flights</span>
-          <span className="font-medium text-[#1f2933]">
-            {formatMoney(details.flight_cost)}
-          </span>
+          <AnimatedMoney value={details.flight_cost} className="font-medium text-[#1f2933]" />
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-[#4a5565]">
             Hotels ({nights} night{nights === 1 ? "" : "s"})
           </span>
-          <span className="font-medium text-[#1f2933]">
-            {formatMoney(details.hotel_cost)}
-          </span>
+          <AnimatedMoney value={details.hotel_cost} className="font-medium text-[#1f2933]" />
         </div>
         {/* Drawn / allowed, with the allowance muted — nothing is spent against
             a per-diem until receipts come in. */}

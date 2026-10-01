@@ -11,13 +11,14 @@ import {
   ChevronRight,
   Filter,
   Upload,
-  FileText,
   Info,
+  Paperclip,
   Sparkles
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Button } from "../ui/button";
 import { TripSummaryCard } from "../TripSummaryCard";
+import { Typewriter } from "../Typewriter";
 import { TripTotalsCard } from "../TripTotalsCard";
 import svgPaths from "../../imports/svg-kxhvyi8xmt";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
@@ -153,9 +154,10 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
               <h2 className="font-display font-medium text-[20px] leading-tight text-[#0a0a0a] m-0">
                 Worktrip Autopilot has completed the booking
               </h2>
-              <p className="text-[14px] font-normal text-[#4a5565] m-0 mt-1">
-                Your confirmation will be sent to your inbox
-              </p>
+              <Typewriter
+                className="block text-[14px] font-normal text-[#4a5565] mt-1"
+                text="Your confirmation will be sent to your inbox"
+              />
             </div>
           </div>
         )}
@@ -173,11 +175,19 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
           travelers={travelers}
           purpose={trip.purpose}
           chip={
+            // One chip style across the app: filled purple for a state the
+            // agent reached itself, a quiet outline for anything else.
             <div
-              className={`${isBooked ? "bg-[#dafbe8] border-[#a6e5bd]" : "bg-[#D4E9FF] border-[#a8c8f0]"} border rounded-full px-3 py-1 flex items-center justify-center`}
+              className={`${
+                isBooked
+                  ? "bg-[#916AF5] border-transparent"
+                  : "bg-white border-[#D8D3E5]"
+              } border rounded-full px-2.5 py-[4px] flex items-center justify-center`}
             >
               <span
-                className={`font-medium text-[12px] leading-[16px] ${isBooked ? "text-[#4dc13a]" : "text-[#1246A5]"}`}
+                className={`font-medium text-[12px] leading-[16px] ${
+                  isBooked ? "text-white" : "text-[#4a5565]"
+                }`}
               >
                 {isBooked ? "\u2713 Booked" : trip.status}
               </span>
@@ -525,11 +535,11 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                               <th className="text-left py-3 px-4 w-12">
                                 
                               </th>
-                              <th className="text-left py-3 px-4 text-xs font-medium text-[#4a5565]">Date</th>
-                              <th className="text-left py-3 px-4 text-xs font-medium text-[#4a5565]">Merchant</th>
-                              <th className="text-left py-3 px-4 text-xs font-medium text-[#4a5565]">Category</th>
-                              <th className="text-left py-3 px-4 text-xs font-medium text-[#4a5565]">Amount</th>
-                              <th className="text-left py-3 px-4 text-xs font-medium text-[#4a5565]">File</th>
+                              <th className="text-left py-2.5 px-4 text-xs font-medium text-[#4a5565]">Date</th>
+                              <th className="text-left py-2.5 px-4 text-xs font-medium text-[#4a5565]">Merchant</th>
+                              <th className="text-left py-2.5 px-4 text-xs font-medium text-[#4a5565]">Category</th>
+                              <th className="text-left py-2.5 px-4 text-xs font-medium text-[#4a5565]">Amount</th>
+                              <th className="text-left py-2.5 px-4 text-xs font-medium text-[#4a5565]">File</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -542,40 +552,44 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                             ) : (
                               expenses.map((expense) => (
                                 <tr key={expense.id} className="border-b border-[#e5e7eb] hover:bg-gray-50/50">
-                                  <td className="py-3 px-4">
+                                  <td className="py-2.5 px-4">
                                     <input type="checkbox" className="w-4 h-4 rounded border-gray-300" />
                                   </td>
-                                  <td className="py-3 px-4 text-sm text-[#1f2933]">{formatDate(expense.date)}</td>
-                                  <td className="py-3 px-4 text-sm text-[#1f2933]">{expense.merchant}</td>
-                                  <td className="py-3 px-4">
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-[rgba(18,70,165,0.1)] border border-[rgba(18,70,165,0.2)] text-xs text-[#1f2933]">
+                                  <td className="py-2.5 px-4 text-sm text-[#1f2933] whitespace-nowrap">{formatDate(expense.date)}</td>
+                                  <td className="py-2.5 px-4 text-sm text-[#1f2933]">{expense.merchant}</td>
+                                  <td className="py-2.5 px-4">
+                                    <span className="inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full bg-white border border-[#D8D3E5] text-xs text-[#4a5565]">
                                       {expense.category}
                                     </span>
                                   </td>
-                                  <td className="py-3 px-4 text-sm font-normal text-[#1f2933]">
+                                  <td className="py-2.5 px-4 text-sm font-normal text-[#1f2933] whitespace-nowrap">
                                     ${Number(expense.amount ?? 0).toFixed(2)}
                                   </td>
-                                  <td className="py-3 px-4">
+                                  {/* Icon only. The label this used to carry
+                                      ("Filed by Autopilot") wrapped onto its own
+                                      lines and made every row three deep; the
+                                      tooltip says the same thing in no space. */}
+                                  <td className="py-2.5 px-4">
                                     {expense.source === "agent" ? (
                                       <span
-                                        className="inline-flex items-center gap-1.5 rounded-md bg-[rgba(145,106,245,0.1)] border border-[rgba(145,106,245,0.25)] px-2 py-1 text-xs text-[#6b47c4] whitespace-nowrap"
+                                        className="text-[#916AF5] inline-block"
                                         title="Booked and filed by Worktrip Autopilot"
                                       >
-                                        <Sparkles className="w-3 h-3 fill-current" />
-                                        Filed by Autopilot
+                                        <Paperclip className="w-4 h-4" />
                                       </span>
                                     ) : expense.receipt_url ? (
                                       <a
                                         href={expense.receipt_url}
                                         target="_blank"
                                         rel="noreferrer"
+                                        title="Receipt attached — open it"
                                         className="text-[#4a5565] hover:text-[#1f2933] inline-block"
                                       >
-                                        <FileText className="w-4 h-4" />
+                                        <Paperclip className="w-4 h-4" />
                                       </a>
                                     ) : (
-                                      <span className="text-[#c4c7ce]">
-                                        <FileText className="w-4 h-4" />
+                                      <span className="text-[#c4c7ce]" title="No receipt yet">
+                                        <Paperclip className="w-4 h-4" />
                                       </span>
                                     )}
                                   </td>

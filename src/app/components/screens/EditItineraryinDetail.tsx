@@ -7,6 +7,8 @@ import { Trip, getTrip } from "../../utils/tripApi";
 import { TripSummaryCard } from "../TripSummaryCard";
 import { TripTotalsCard } from "../TripTotalsCard";
 import { AirlineLogo } from "../AirlineLogo";
+import { Typewriter } from "../Typewriter";
+import { Reveal } from "../Reveal";
 import {
   parseFlight,
   flightDuration,
@@ -46,8 +48,8 @@ function FlightCard({ flight, raw }: { flight: ParsedFlight | null; raw?: string
   return (
     <div className="bg-[#fafafa] rounded-xl p-4 border border-[#e5e7eb]">
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-8 h-8 flex items-center justify-center">
-          <AirlineLogo flight={flight.raw} alt={flight.airline} size={24} />
+        <div className="w-8 h-8 rounded-[8px] overflow-hidden flex items-center justify-center flex-shrink-0">
+          <AirlineLogo flight={flight.raw} alt={flight.airline} size={20} fill />
         </div>
 
         <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0 mr-0 lg:mr-8">
@@ -223,16 +225,19 @@ export function EditItineraryinDetail({
             <h1 className="font-display font-medium text-[20px] leading-tight text-[#0a0a0a] m-0">
               Edit and finalize your itinerary
             </h1>
-            <p className="text-[14px] font-normal text-[#4a5565] m-0 mt-1">
-              Adjust your trip itinerary in detail before booking
-            </p>
+            {/* Same voice as the options screen: the agent says what it
+                just did, the title stays put. */}
+            <Typewriter
+              className="block text-[14px] font-normal text-[#4a5565] mt-1"
+              text="Adjust your trip itinerary in detail before booking"
+            />
           </div>
         </div>
 
         {/* Back Button */}
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 mb-6 text-[#9095a1] hover:text-[#6d6788] transition-colors text-sm"
+          className="inline-flex items-center gap-1.5 mb-6 -ml-2 px-2 py-1.5 rounded-[8px] text-[#4a5565] hover:text-[#1f2933] hover:bg-white/70 transition-colors text-sm"
         >
           <ChevronLeft className="w-4 h-4" />
           Back to options
@@ -251,7 +256,7 @@ export function EditItineraryinDetail({
           actions={
             <button
               onClick={onBack}
-              className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#D8D3E5] bg-[#F2F1F8] text-[#916AF5] text-[14px] font-medium hover:bg-[#ddd0ff] transition-colors"
+              className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#C7BCEB] bg-white text-[#916AF5] text-[14px] font-medium shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] hover:bg-[#F2F1F8] hover:border-[#916AF5] transition-colors"
             >
               Edit
             </button>
@@ -262,8 +267,10 @@ export function EditItineraryinDetail({
         {/* White Container Card */}
         <div className="bg-white/90 rounded-[24px] p-3 sm:p-[18px] shadow-sm">
           <div className="flex flex-col lg:flex-row gap-[18px]">
-            {/* LEFT CARD - Schedule (Largest) */}
-            <div className="w-full lg:flex-1 lg:min-w-0 bg-white rounded-2xl border border-[#e5e7eb] p-4 sm:p-6">
+            {/* The schedule settles first, the money column just behind it —
+                the same left-to-right order the options screen used. */}
+            <Reveal className="w-full lg:flex-1 lg:min-w-0">
+            <div className="w-full bg-white rounded-2xl border border-[#e5e7eb] p-4 sm:p-6">
               {/* Selected Option Header */}
               <div className="mb-4">
                 <div>
@@ -449,6 +456,12 @@ export function EditItineraryinDetail({
 
               {/* Why the agent built it this way */}
               <div className="mb-6">
+                {highlights.length > 0 && (
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Sparkles className="w-4 h-4 text-[#916AF5]" strokeWidth={1.75} aria-hidden />
+                    <p className="text-sm font-semibold text-[#101828] m-0">Agent Notes</p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   {highlights.map((point, index: number) => (
                     <div key={index} className="flex items-start gap-2 text-sm text-[#4a5565]">
@@ -483,8 +496,11 @@ export function EditItineraryinDetail({
               </div>
             </div>
 
+            </Reveal>
+
             {/* RIGHT COLUMN - 2 Separate Cards */}
-            <div className="w-full lg:w-[397px] lg:flex-shrink-0 flex flex-col gap-[18px]">
+            <Reveal delay={120} className="w-full lg:w-[397px] lg:flex-shrink-0">
+            <div className="w-full flex flex-col gap-[18px]">
               {/* RIGHT TOP CARD - Budget & Spend */}
 
               <TripTotalsCard trip={trip} itinerary={itinerary} />
@@ -537,6 +553,7 @@ export function EditItineraryinDetail({
                 </svg>
               </button>
             </div>
+            </Reveal>
           </div>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { IntentCapture } from "./components/screens/IntentCapture";
 import { PreferenceSetup } from "./components/screens/PreferenceSetup";
 import { TripOverview } from "./components/screens/TripOverview";
@@ -259,9 +260,19 @@ export default function App() {
       onNavChange={() => setCurrentScreen("intent-capture")}
       onLogoClick={handleBackToHome}
     >
-      <div className="min-h-screen">
-        {renderScreen()}
-      </div>
+      {/* Screens cross-fade into each other: the one leaving goes first, then
+          the next arrives. The nav bar sits outside this and never moves. */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={currentScreen}
+          className="min-h-screen"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { duration: 0.2, ease: "easeOut" } }}
+          exit={{ opacity: 0, transition: { duration: 0.15, ease: "easeIn" } }}
+        >
+          {renderScreen()}
+        </motion.div>
+      </AnimatePresence>
       <Toaster />
     </AppShell>
   );
