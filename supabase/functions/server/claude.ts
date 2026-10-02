@@ -449,6 +449,10 @@ export async function synthesizeItineraries(
       "- premium: prioritizes time and comfort (direct flights, closer hotel)\n" +
       "- budget: minimizes cost while staying workable — a 2 or 3 star hotel, " +
       "never a hostel, shared room, or unrated property\n\n" +
+      "Every option, the budget one included, must be something a company " +
+      "would actually book for an employee on business: a hotel with a star " +
+      "rating, and a mainline carrier rather than an ultra-low-cost one. " +
+      "Cheapest is not the goal; defensible is.\n\n" +
       "Rules:\n" +
       "- Use ONLY the flights and hotels provided. Never invent an airline, flight " +
       "number, hotel, or price. If inventory is thin, reuse an option and say so " +

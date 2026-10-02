@@ -640,12 +640,9 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
             )}
           </div>
 
-          {loadingDemos && (
-            <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-sm h-[90px] px-6 flex items-center gap-3">
-              <Loader2 className="w-4 h-4 animate-spin text-[#916AF5]" />
-              <span className="text-[14px] text-[#4a5565]">Loading trips…</span>
-            </div>
-          )}
+          {/* Nothing while the trips load. They arrive in well under a second
+              and the section is below the fold, so a placeholder only drew the
+              eye to a wait that was not worth announcing. */}
 
           {!loadingDemos && demoTrips.length === 0 && (
             <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-sm h-[90px] px-6 flex items-center">

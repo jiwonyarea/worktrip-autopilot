@@ -106,6 +106,41 @@ function toOutbound(entry: any): OutboundOption {
   };
 }
 
+// Carriers a corporate travel policy does not put people on: ultra-low-cost
+// and leisure airlines whose fares exclude the bag, the seat assignment and the
+// change that a work trip needs. Matched on name and on the code heading the
+// flight number, since SerpApi gives both.
+const LEISURE_CARRIERS = [
+  { code: "NK", name: "spirit" },
+  { code: "F9", name: "frontier" },
+  { code: "G4", name: "allegiant" },
+  { code: "WN", name: "southwest" },
+  { code: "SY", name: "sun country" },
+  { code: "MX", name: "breeze" },
+  { code: "XP", name: "avelo" },
+  { code: "FR", name: "ryanair" },
+  { code: "W6", name: "wizz" },
+  { code: "U2", name: "easyjet" },
+  { code: "VY", name: "vueling" },
+];
+
+function isLeisureCarrier(leg: FlightLeg): boolean {
+  const name = (leg.airline ?? "").toLowerCase();
+  const code = (leg.flightNumber ?? "").trim().slice(0, 2).toUpperCase();
+  return LEISURE_CARRIERS.some((c) => name.includes(c.name) || code === c.code);
+}
+
+/**
+ * Drop itineraries flown by a leisure carrier — unless that would leave the
+ * route with nothing. Some city pairs are served by one of these and little
+ * else, and no flights at all is worse for the organiser than a flight they
+ * would rather not take.
+ */
+function preferBusinessCarriers<T>(options: T[], legsOf: (option: T) => FlightLeg[]): T[] {
+  const kept = options.filter((option) => !legsOf(option).some(isLeisureCarrier));
+  return kept.length > 0 ? kept : options;
+}
+
 /**
  * Search round-trip flights.
  *
@@ -144,7 +179,10 @@ export async function searchFlights(opts: {
     ...(first.other_flights ?? []),
   ].slice(0, 12);
 
-  const outboundOptions = entries.map(toOutbound).filter((o) => o.legs.length > 0);
+  const outboundOptions = preferBusinessCarriers(
+    entries.map(toOutbound).filter((o) => o.legs.length > 0),
+    (o) => o.legs,
+  );
 
   // Exchange the best outbound's token for real return itineraries.
   let returnOptions: FlightLeg[][] = [];
@@ -159,6 +197,7 @@ export async function searchFlights(opts: {
         .slice(0, 6)
         .map((e: any) => toLegs(e.flights))
         .filter((legs) => legs.length > 0);
+      returnOptions = preferBusinessCarriers(returnOptions, (legs) => legs);
     }
   }
 
