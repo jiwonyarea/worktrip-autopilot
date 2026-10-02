@@ -11,6 +11,7 @@ import { BookingInProgress } from "./components/screens/BookingInProgress";
 import { ConfirmAndBook } from "./components/screens/ConfirmAndBook";
 import { ExpensesReport } from "./components/screens/ExpensesReport";
 import { AppShell } from "./components/AppShell";
+import { DEV_TRIP_ID } from "./utils/devTrip";
 import { Toaster } from "./components/ui/sonner";
 import { Trip } from "./utils/tripApi";
 import "../styles/globals.css";
@@ -158,6 +159,16 @@ export default function App() {
             initialIntent={intentDraft}
             onOpenDemoTrip={handleOpenDemoTrip}
             onOpenTripExpenses={handleOpenTripExpenses}
+            onOpenDevPreview={() => {
+              setCurrentTripId(DEV_TRIP_ID);
+              setSelectedItineraryId("dev-balanced");
+              setCurrentScreen("edit-itinerary-detail");
+            }}
+            onOpenDevOptions={() => {
+              setCurrentTripId(DEV_TRIP_ID);
+              setSelectedItineraryId(null);
+              setCurrentScreen("review-approve");
+            }}
           />
         );
       

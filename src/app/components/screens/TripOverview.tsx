@@ -7,7 +7,6 @@ import {
   Calendar, 
   Plane,
   Hotel,
-  CheckCircle,
   ChevronRight,
   Filter,
   Upload,
@@ -20,6 +19,9 @@ import { Button } from "../ui/button";
 import { TripSummaryCard } from "../TripSummaryCard";
 import { Typewriter } from "../Typewriter";
 import { TripTotalsCard } from "../TripTotalsCard";
+import { StatusIcon } from "../StatusIcon";
+import { AnimatedMoney } from "../AnimatedMoney";
+import { PolicyDialog } from "../PolicyDialog";
 import svgPaths from "../../imports/svg-kxhvyi8xmt";
 import bgImage from "figma:asset/68491a71f021c38c1c7368d77b05b5434580c49f.png";
 import { Loader2 } from "lucide-react";
@@ -45,6 +47,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
   const [activeTab, setActiveTab] = useState<"overview" | "expenses">("overview");
   // Motion loops are JS-driven, so the CSS reduced-motion rule cannot reach them.
   const reduceMotion = useReducedMotion();
+  const [policyOpen, setPolicyOpen] = useState(false);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,10 +134,11 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
       .reduce((sum, e) => sum + Number(e.amount ?? 0), 0);
 
   return (
-    <div 
-      className="min-h-screen relative bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${bgImage})` }}
-    >
+    <>
+      <div
+        className="min-h-screen relative bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      >
       {/* Main content */}
       <div className="relative max-w-[1088px] mx-auto px-4 sm:px-6 lg:px-8 pt-[60px] pb-8">
         {/* The agent speaking, in the same voice it used while planning —
@@ -170,6 +174,8 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
           className="mb-4"
           name={trip.trip_name || trip.inferred_trip_name || "Work Trip"}
           destination={trip.destination || trip.inferred_destination}
+          venue={(trip as any).venue}
+          venueAddress={(trip as any).venue_address}
           startDate={trip.start_date}
           endDate={trip.end_date}
           travelers={travelers}
@@ -185,7 +191,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
               } border rounded-full px-2.5 py-[4px] flex items-center justify-center`}
             >
               <span
-                className={`font-medium text-[12px] leading-[16px] ${
+                className={`font-medium text-[11px] leading-none ${
                   isBooked ? "text-white" : "text-[#4a5565]"
                 }`}
               >
@@ -243,7 +249,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                     {/* All bookings confirmed */}
                     <div className="bg-[rgba(31,157,85,0.1)] rounded-xl p-4 border border-[rgba(31,157,85,0.2)]">
                       <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle className="w-5 h-5 text-[#1f9d55]" />
+                        <StatusIcon size={18} />
                         <h3 className="font-normal text-sm text-[#1f2933]">
                           All bookings confirmed
                         </h3>
@@ -271,8 +277,11 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                     </div>
                   </div>
 
-                  {/* My Schedule Section - Bordered Container */}
-                  <div className="bg-white/40 backdrop-blur-sm rounded-xl border border-[#e5e7eb] p-5">
+                    {/* My Schedule Section - Bordered Container. Grows to take
+                      whatever height the money column needs, so the two sides
+                      of the page end level instead of leaving the schedule
+                      stranded short. */}
+                  <div className="flex-1 bg-white/40 backdrop-blur-sm rounded-xl border border-[#e5e7eb] p-5">
                     {/* Header with title, button, and actions */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
                       <div className="flex items-center gap-4">
@@ -308,11 +317,14 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                         <div className="flex gap-4">
                           {/* Timeline vertical line */}
                           <div className="flex flex-col items-center w-14 flex-shrink-0">
-                            <div className="w-0.5 h-full bg-[#e5e7eb]"></div>
+                            <div className="w-0.5 h-full bg-[#e5e7eb] rounded-full"></div>
                           </div>
 
-                          {/* Events */}
-                          <div className="flex-1 space-y-2">
+                          {/* Events. The padding below the last one is what
+                              the timeline runs on into: a rail stopping flush
+                              with the final card reads as the day being cut
+                              off rather than running out. */}
+                          <div className="flex-1 space-y-2 pb-7">
                             {/* Flight */}
                             <div className="bg-[#f7f6f8] border border-[rgba(179,173,196,0.28)] rounded-lg p-3 flex items-center gap-3 hover:border-gray-300 transition-colors cursor-pointer">
                               <div className="flex-shrink-0">
@@ -384,11 +396,14 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                         <div className="flex gap-4">
                           {/* Timeline vertical line */}
                           <div className="flex flex-col items-center w-14 flex-shrink-0">
-                            <div className="w-0.5 h-full bg-[#e5e7eb]"></div>
+                            <div className="w-0.5 h-full bg-[#e5e7eb] rounded-full"></div>
                           </div>
 
-                          {/* Events */}
-                          <div className="flex-1 space-y-2">
+                          {/* Events. The padding below the last one is what
+                              the timeline runs on into: a rail stopping flush
+                              with the final card reads as the day being cut
+                              off rather than running out. */}
+                          <div className="flex-1 space-y-2 pb-7">
                             {/* Hotel checkout */}
                             <div className="bg-[#f7f6f8] border border-[rgba(179,173,196,0.28)] rounded-lg p-3 flex items-center gap-3 hover:border-gray-300 transition-colors cursor-pointer">
                               <div className="flex-shrink-0">
@@ -454,14 +469,14 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                             </svg>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-normal text-[#1f2933]">Corporate card</div>
-                            <div className="text-xs text-[#6a7282]">Visa •••• 4242</div>
+                            <div className="text-sm font-normal text-[#1f2933]">Amex Corporate Platinum</div>
+                            <div className="text-xs text-[#6a7282]">•••• 3007 · exp 09/28</div>
                           </div>
                         </div>
                       </div>
 
                       {/* Auto-fill toggle */}
-                      <div className="bg-[rgba(24,160,166,0.05)] border border-[rgba(24,160,166,0.2)] rounded-lg p-4 flex items-center justify-between gap-3">
+                      <div className="bg-[#F6F3FE] border border-[#DFD6FA] rounded-lg p-4 flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-[#1f2933] leading-snug">
                             Auto-fill purchase card forms and draft expense reports
@@ -469,13 +484,16 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                         </div>
                         <div className="relative inline-block w-8 h-[18px] flex-shrink-0">
                           <input type="checkbox" defaultChecked className="peer sr-only" id="auto-fill-toggle" />
-                          <label htmlFor="auto-fill-toggle" className="block w-8 h-[18px] bg-[#030213] rounded-full cursor-pointer peer-focus:ring-2 peer-focus:ring-[#030213]/30 relative after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-[14px]"></label>
+                          <label htmlFor="auto-fill-toggle" className="block w-8 h-[18px] bg-[#D8D3E5] peer-checked:bg-[#916AF5] rounded-full cursor-pointer transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[#916AF5]/40 relative after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-[14px]"></label>
                         </div>
                       </div>
                     </div>
 
                     {/* View policy details */}
-                    <button className="w-full bg-[rgba(31,157,85,0.1)] border border-[rgba(31,157,85,0.2)] hover:bg-[rgba(31,157,85,0.15)] text-[#1f2933] text-sm py-3 px-4 rounded-xl transition-colors text-left flex items-center justify-between font-normal h-14">
+                    <button
+                      onClick={() => setPolicyOpen(true)}
+                      className="w-full bg-[rgba(31,157,85,0.1)] border border-[rgba(31,157,85,0.2)] hover:bg-[rgba(31,157,85,0.15)] text-[#1f2933] text-sm py-3 px-4 rounded-xl transition-colors text-left flex items-center justify-between font-normal h-14"
+                    >
                       <span>View Policy Details</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -487,7 +505,7 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
 
           {/* Expenses Tab Content */}
           {activeTab === "expenses" && (
-            <div className="p-6 min-h-[800px]">
+            <div className="p-6 min-h-[800px] flex flex-col">
               {/* Info banner */}
               <div className="mb-6 bg-[rgba(18,70,165,0.1)] border border-[rgba(18,70,165,0.2)] rounded-xl px-4 py-3 flex items-center gap-3">
                 <Info className="w-4 h-4 text-[#1246a5] flex-shrink-0" />
@@ -496,10 +514,13 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                 </p>
               </div>
 
-              <div className="flex flex-col lg:flex-row gap-6">
-                {/* Left Column - Expenses Table (624px) */}
-                <div className="flex-1 lg:w-[624px] min-w-0">
-                  <div className="bg-white/40 backdrop-blur-sm border border-[#e5e7eb] rounded-xl p-5">
+              <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+                {/* Left Column - Expenses Table (624px). The panel takes the
+                    full height of the row, the same way the schedule does on
+                    the overview tab, so the two sides of the page end level
+                    however few expenses have been filed. */}
+                <div className="flex-1 lg:w-[624px] min-w-0 flex">
+                  <div className="w-full bg-white/40 backdrop-blur-sm border border-[#e5e7eb] rounded-xl p-5 flex flex-col">
                     {/* Header with title and buttons */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
                       <h3 className="text-base font-semibold text-[#1f2933]">Expenses ({expenses.length})</h3>
@@ -526,8 +547,9 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                       </div>
                     </div>
 
-                    {/* Expenses Table */}
-                    <div className="bg-white border border-[#e5e7eb] rounded-lg overflow-hidden">
+                    {/* Expenses Table — takes the slack, so the panel grows
+                        downwards rather than stretching its header. */}
+                    <div className="flex-1 bg-white border border-[#e5e7eb] rounded-lg overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full min-w-[560px]">
                           <thead className="bg-[#f7f6f8] border-b border-[#e5e7eb]">
@@ -557,10 +579,8 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                                   </td>
                                   <td className="py-2.5 px-4 text-sm text-[#1f2933] whitespace-nowrap">{formatDate(expense.date)}</td>
                                   <td className="py-2.5 px-4 text-sm text-[#1f2933]">{expense.merchant}</td>
-                                  <td className="py-2.5 px-4">
-                                    <span className="inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full bg-white border border-[#D8D3E5] text-xs text-[#4a5565]">
-                                      {expense.category}
-                                    </span>
+                                  <td className="py-2.5 px-4 text-sm text-[#4a5565] whitespace-nowrap">
+                                    {expense.category}
                                   </td>
                                   <td className="py-2.5 px-4 text-sm font-normal text-[#1f2933] whitespace-nowrap">
                                     ${Number(expense.amount ?? 0).toFixed(2)}
@@ -612,7 +632,10 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                       
                       <div className="flex items-baseline justify-between mb-4">
                         <span className="text-sm text-[#4a5565]">Total expenses</span>
-                        <span className="text-2xl font-normal text-[#0a0a0a]">{formatMoney(expenseTotal)}</span>
+                        <AnimatedMoney
+                          value={expenseTotal}
+                          className="text-3xl font-semibold text-[#0a0a0a]"
+                        />
                       </div>
 
                       {/* Breakdown */}
@@ -636,14 +659,17 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
                       </div>
 
                       {/* Within policy indicator */}
-                      <div className="flex items-center gap-2 text-sm text-[#52c93f]">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>within policy</span>
+                      <div className="flex items-center gap-1.5 text-sm text-[#1F9D55]">
+                        <StatusIcon size={16} />
+                        <span>Within policy</span>
                       </div>
                     </div>
 
                     {/* View policy details */}
-                    <button className="w-full bg-[rgba(31,157,85,0.1)] border border-[rgba(31,157,85,0.2)] hover:bg-[rgba(31,157,85,0.15)] text-[#1f2933] text-sm py-3 px-4 rounded-xl transition-colors text-left flex items-center justify-between font-normal h-14">
+                    <button
+                      onClick={() => setPolicyOpen(true)}
+                      className="w-full bg-[rgba(31,157,85,0.1)] border border-[rgba(31,157,85,0.2)] hover:bg-[rgba(31,157,85,0.15)] text-[#1f2933] text-sm py-3 px-4 rounded-xl transition-colors text-left flex items-center justify-between font-normal h-14"
+                    >
                       <span>View Policy Details</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -654,6 +680,9 @@ export function TripOverview({ onViewExpenses, onNewTrip, onBack, tripId, select
           )}
         </div>
       </div>
-    </div>
+      </div>
+
+      <PolicyDialog open={policyOpen} onClose={() => setPolicyOpen(false)} />
+    </>
   );
 }

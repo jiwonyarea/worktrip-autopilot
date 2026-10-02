@@ -103,19 +103,26 @@ export function BookingInProgress({
     return () => clearTimeout(timer);
   }, [currentStep, error]);
 
+  const done = currentStep > bookingSteps.length;
+
   // Both finished: tick the final node, let it land, then hand over.
   useEffect(() => {
     if (error) return;
     if (!confirmed || currentStep < bookingSteps.length) return;
 
-    const timers = [
-      setTimeout(() => setCurrentStep(bookingSteps.length + 1), 300),
-      setTimeout(() => completeRef.current(), 1000),
-    ];
-    return () => timers.forEach(clearTimeout);
+    const timer = setTimeout(() => setCurrentStep(bookingSteps.length + 1), 300);
+    return () => clearTimeout(timer);
   }, [confirmed, currentStep, error]);
 
-  const done = currentStep > bookingSteps.length;
+  // Hand over only once the agent has finished saying the trip is booked, and
+  // then after a beat. Leaving mid-sentence read as the screen cutting the
+  // agent off at the one moment it has good news.
+  const [lineTyped, setLineTyped] = useState(false);
+  useEffect(() => {
+    if (error || !done || !lineTyped) return;
+    const timer = setTimeout(() => completeRef.current(), 2000);
+    return () => clearTimeout(timer);
+  }, [done, lineTyped, error]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-8">
@@ -165,6 +172,7 @@ export function BookingInProgress({
           ) : (
             <Typewriter
               className="block mt-3 text-[14px] font-normal text-[#4A4A4A]"
+              onDone={() => setLineTyped(true)}
               text={
                 done
                   ? "Confirmations are on their way to everyone travelling."

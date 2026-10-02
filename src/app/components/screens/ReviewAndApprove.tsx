@@ -23,6 +23,7 @@ import {
 } from "../ui/accordion";
 import { AirlineLogo } from "../AirlineLogo";
 import { Typewriter } from "../Typewriter";
+import { DEV_TRIP_ID, devTrip } from "../../utils/devTrip";
 import { AnimatedMoney } from "../AnimatedMoney";
 import { ItinerarySkeleton } from "../ItinerarySkeleton";
 import { parseFlight, formatMoney, nightsBetween } from "../../utils/itinerary";
@@ -67,6 +68,16 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
 
   // Fetch trip data on mount
   useEffect(() => {
+    // The dev fixture, for looking at this screen without spending a
+    // generation. Exact id only — no real trip falls back to it.
+    if (tripId === DEV_TRIP_ID) {
+      const data = devTrip();
+      setTrip(data);
+      setSelectedItineraryId("dev-balanced");
+      setLoading(false);
+      return;
+    }
+
     if (tripId) {
       setLoading(true);
       getTrip(tripId)
@@ -218,6 +229,8 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
           className="mb-6"
           name={trip.trip_name || trip.inferred_trip_name || "Work Trip"}
           destination={trip.destination || trip.inferred_destination}
+          venue={(trip as any).venue}
+          venueAddress={(trip as any).venue_address}
           startDate={trip.start_date || trip.inferred_dates?.start_date}
           endDate={trip.end_date || trip.inferred_dates?.end_date}
           travelers={trip.travelers?.length || 1}
@@ -225,7 +238,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
           actions={
             <button
               onClick={onEditTrip}
-              className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#C7BCEB] bg-white text-[#916AF5] text-[14px] font-medium shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] hover:bg-[#F2F1F8] hover:border-[#916AF5] transition-colors"
+              className="h-8 px-3 rounded-lg border border-[rgba(0,0,0,0.1)] bg-[#f5f7fa] text-[14px] font-medium text-[#1f2933] hover:bg-gray-100 transition-colors"
             >
               Edit
             </button>
@@ -264,12 +277,13 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
                         {LABELS[option.option_label] ?? option.title}
                       </h3>
                       {isRecommended && (
-                        // One pulse as it lands, then still. A badge that keeps
-                        // moving stops being a label and becomes an advert.
+                        // It fades up with the card and then stays put. The
+                        // pulse read as the badge selling itself; a label the
+                        // agent stands behind does not need to bounce.
                         <motion.span
-                          initial={reduceMotion ? false : { scale: 1 }}
-                          animate={reduceMotion ? undefined : { scale: [1, 1.15, 1] }}
-                          transition={{ duration: 0.4, delay: 0.55, ease: "easeInOut" }}
+                          initial={reduceMotion ? false : { opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3, delay: 0.45, ease: "easeOut" }}
                           className="px-2.5 py-[4px] rounded-full bg-[#916AF5] text-white text-[11px] font-medium leading-none"
                         >
                           Recommended
@@ -375,7 +389,7 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
                 <div className="flex flex-col gap-2 mb-[48px]">
                   {highlights.length > 0 && (
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Sparkles className="w-4 h-4 text-[#916AF5]" strokeWidth={1.75} aria-hidden />
+                      <Sparkles className="w-4 h-4 text-[#916AF5] fill-[#916AF5]" strokeWidth={1.75} aria-hidden />
                       <p className="text-[14px] font-semibold text-[#101828] m-0">Agent Notes</p>
                     </div>
                   )}
@@ -393,7 +407,10 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
 
                 <button
                   onClick={() => handleSwitchOption(option.id)}
-                  className="mt-auto w-full h-[44px] rounded-[8px] bg-[#E9E7EF] text-[#1f2933] text-[18px] font-normal hover:bg-[#916AF5] hover:text-white transition-colors"
+                  // Same button as "Confirm & Complete Booking", one step down the
+                  // scale: this commits you to an option, that one commits the
+                  // money, so they share a face and differ in weight.
+                  className="mt-auto w-full h-[44px] rounded-xl bg-[#916af5] hover:bg-[#7c5dd4] text-white text-[15px] font-semibold transition-colors"
                 >
                   Continue
                 </button>
@@ -448,9 +465,9 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
           </div>
         )}
 
-        {/* The agent explaining itself. */}
-        {policy?.rationale && (
-          <div className="mt-10">
+        {/* Where the three came from. True of every trip, so it is written
+            here rather than asked of the agent each time. */}
+        <div className="mt-10">
             <Accordion
               type="single"
               collapsible
@@ -458,24 +475,33 @@ export function ReviewAndApprove({ onApprove, onEditItinerary, onBack, onEditTri
             >
               <AccordionItem value="why" className="border-b-0">
                 <AccordionTrigger className="py-5 hover:no-underline">
-                  <span className="flex items-center gap-2 text-[18px] font-semibold text-[#1f2933]">
-                    <Sparkles
-                      className="w-[18px] h-[18px] text-[#916AF5] flex-shrink-0"
-                      strokeWidth={1.75}
-                      aria-hidden
-                    />
+                  <span className="text-[18px] font-semibold text-[#1f2933]">
                     Why these options?
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="pb-5 pr-6">
                   <p className="text-[14px] text-[#4a5565] leading-relaxed m-0">
-                    {policy.rationale}
+                    These three are shaped by the preferences you and your
+                    travellers have set — departure times, how far you will walk
+                    to a venue, cost against comfort — and by what you have
+                    chosen on past trips. Autopilot leans on those choices
+                    instead of asking you the same questions again.
+                  </p>
+                  <p className="text-[14px] text-[#4a5565] leading-relaxed m-0 mt-3">
+                    Changed your mind about any of it? You can{" "}
+                    <button
+                      type="button"
+                      onClick={onEditTrip}
+                      className="underline underline-offset-2 hover:text-[#1f2933] transition-colors"
+                    >
+                      update your travel preferences
+                    </button>{" "}
+                    and the agent will plan the next trip against them.
                   </p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

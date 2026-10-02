@@ -23,6 +23,9 @@ interface IntentCaptureProps {
   onOpenDemoTrip?: (tripId: string) => void;
   /** Jump straight to a finished trip's expenses to file receipts. */
   onOpenTripExpenses?: (tripId: string) => void;
+  /** Dev-only shortcuts into the booking screens with a fixture. */
+  onOpenDevPreview?: () => void;
+  onOpenDevOptions?: () => void;
   /** Restores the wording behind an existing trip when editing it. */
   initialIntent?: string;
 }
@@ -85,7 +88,7 @@ const INTENT_SUGGESTIONS = [
   },
 ];
 
-export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenTripExpenses, initialIntent }: IntentCaptureProps) {
+export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenTripExpenses, onOpenDevPreview, onOpenDevOptions, initialIntent }: IntentCaptureProps) {
   const [intent, setIntent] = useState(initialIntent ?? "");
   const [isCreating, setIsCreating] = useState(false);
   const [serverTrip, setServerTrip] = useState<Trip | null>(null);
@@ -339,7 +342,10 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
           {/* The stroke is a wrapper rather than a border or ring, so the field
               and its outline are one shape and the shadow wraps both. */}
           <div className="bg-white/50 rounded-[57px] p-[6px] shadow-[0px_-4px_24px_rgba(0,0,0,0.06)]">
-          <div className="relative bg-white/80 backdrop-blur-xl rounded-[51px] h-[56px] sm:h-[64px] flex items-center px-4 sm:px-6 gap-3 sm:gap-4">
+          {/* The right padding is half the difference between the bar's height
+              and the mic button, so the button's circle nests inside the bar's
+              corner instead of leaving a gap the curve does not explain. */}
+          <div className="relative bg-white/80 backdrop-blur-xl rounded-[51px] h-[56px] sm:h-[64px] flex items-center pl-4 sm:pl-6 pr-[6px] gap-3 sm:gap-4">
             <input
               ref={inputRef}
               value={displayedIntent}
@@ -374,7 +380,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                       ? "Voice input usually needs a real browser window — open this in Chrome, Edge, or Safari"
                       : "Dictate your trip"
                 }
-                className={`flex-shrink-0 relative w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                className={`flex-shrink-0 relative w-11 h-11 sm:w-[52px] sm:h-[52px] rounded-full flex items-center justify-center transition-colors ${
                   speech.listening
                     ? "bg-[#916AF5] text-white"
                     : "text-[#767676] hover:bg-black/5"
@@ -393,7 +399,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
             ) : (
               <span
                 title="Voice input needs Chrome, Edge, or Safari"
-                className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[#c4c7ce] cursor-not-allowed"
+                className="flex-shrink-0 w-11 h-11 sm:w-[52px] sm:h-[52px] rounded-full flex items-center justify-center text-[#c4c7ce] cursor-not-allowed"
               >
                 <MicOff className="w-5 h-5" />
               </span>
@@ -640,6 +646,31 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
             )}
           </div>
 
+          {/* Dev only. Opens the edit screen on a fixture, so the booking
+              screens can be looked at without spending a generation. Stripped
+              from the production bundle by the bundler, since import.meta.env
+              .DEV is a compile-time constant. */}
+          {import.meta.env.DEV && (onOpenDevPreview || onOpenDevOptions) && (
+            <div className="mb-[14px] flex flex-col sm:flex-row gap-2">
+              {onOpenDevOptions && (
+                <button
+                  onClick={onOpenDevOptions}
+                  className="flex-1 rounded-2xl border border-dashed border-[#C7BCEB] bg-white/50 px-5 py-3 text-left text-[13px] text-[#916AF5] hover:bg-white/80 transition-colors"
+                >
+                  Dev · three options
+                </button>
+              )}
+              {onOpenDevPreview && (
+                <button
+                  onClick={onOpenDevPreview}
+                  className="flex-1 rounded-2xl border border-dashed border-[#C7BCEB] bg-white/50 px-5 py-3 text-left text-[13px] text-[#916AF5] hover:bg-white/80 transition-colors"
+                >
+                  Dev · edit screen
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Nothing while the trips load. They arrive in well under a second
               and the section is below the fold, so a placeholder only drew the
               eye to a wait that was not worth announcing. */}
@@ -679,7 +710,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                     <>
                       <button
                         onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                        className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#C7BCEB] bg-white text-[#916AF5] text-[14px] font-medium shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] hover:bg-[#F2F1F8] hover:border-[#916AF5] transition-colors"
+                        className="h-8 px-3 rounded-lg border border-[rgba(0,0,0,0.1)] bg-[#f5f7fa] text-[14px] font-medium text-[#1f2933] hover:bg-gray-100 transition-colors"
                       >
                         View
                       </button>
@@ -693,7 +724,7 @@ export function IntentCapture({ onStartPlanning, tripId, onOpenDemoTrip, onOpenT
                       ) : (
                         <button
                           onClick={() => onOpenDemoTrip?.(demo.trip_id)}
-                          className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#C7BCEB] bg-white text-[#916AF5] text-[14px] font-medium shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] hover:bg-[#F2F1F8] hover:border-[#916AF5] transition-colors"
+                          className="h-8 px-3 rounded-lg border border-[rgba(0,0,0,0.1)] bg-[#f5f7fa] text-[14px] font-medium text-[#1f2933] hover:bg-gray-100 transition-colors"
                         >
                           Edit
                         </button>

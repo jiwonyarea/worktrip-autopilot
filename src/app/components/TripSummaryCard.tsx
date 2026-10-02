@@ -9,6 +9,10 @@ import { formatDateRange } from "../utils/itinerary";
 interface TripSummaryCardProps {
   name: string;
   destination?: string | null;
+  /** Where the trip actually happens — the venue, not the city. */
+  venue?: string | null;
+  /** Street address for that venue, shown under the row. */
+  venueAddress?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   travelers?: number | null;
@@ -24,6 +28,8 @@ interface TripSummaryCardProps {
 export function TripSummaryCard({
   name,
   destination,
+  venue,
+  venueAddress,
   startDate,
   endDate,
   travelers,
@@ -45,10 +51,12 @@ export function TripSummaryCard({
         </div>
 
         <div className="flex items-center gap-4 text-[14px] font-normal text-[#4a5565] flex-wrap">
-          {destination && (
+          {/* The venue where there is one. "Austin" says which airport to fly
+              into; "Austin Convention Center" says where you are going. */}
+          {(venue || destination) && (
             <span className="flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-              {destination}
+              {venue || destination}
             </span>
           )}
           {startDate && (
@@ -70,6 +78,10 @@ export function TripSummaryCard({
             </span>
           )}
         </div>
+
+        {venueAddress && (
+          <p className="mt-1.5 text-[13px] text-[#9095a1] m-0 truncate">{venueAddress}</p>
+        )}
       </div>
 
       {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}

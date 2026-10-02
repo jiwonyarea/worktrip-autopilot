@@ -17,3 +17,6 @@ dist/
 # os / editor
 .DS_Store
 *.log
+
+# supabase cli version check scratch
+supabase/.temp/cli-latest

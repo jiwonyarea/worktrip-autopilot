@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 
 // Text the agent appears to be writing as you arrive. Used for the one line
@@ -15,16 +15,23 @@ interface TypewriterProps {
   speed?: number;
   /** Milliseconds to wait before the first character. */
   delay?: number;
+  /** Fires once the last character lands — or at once, under reduced motion. */
+  onDone?: () => void;
   className?: string;
 }
 
-export function Typewriter({ text, speed = 34, delay = 160, className = "" }: TypewriterProps) {
+export function Typewriter({ text, speed = 34, delay = 160, onDone, className = "" }: TypewriterProps) {
   const reduceMotion = useReducedMotion();
   const [shown, setShown] = useState(0);
+  // Through a ref so a caller passing an inline function does not restart the
+  // typing on every render.
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
 
   useEffect(() => {
     if (reduceMotion) {
       setShown(text.length);
+      doneRef.current?.();
       return;
     }
 
@@ -36,7 +43,10 @@ export function Typewriter({ text, speed = 34, delay = 160, className = "" }: Ty
       ticker = window.setInterval(() => {
         typed += 1;
         setShown(typed);
-        if (typed >= text.length && ticker) window.clearInterval(ticker);
+        if (typed >= text.length) {
+          if (ticker) window.clearInterval(ticker);
+          doneRef.current?.();
+        }
       }, speed);
     }, delay);
 

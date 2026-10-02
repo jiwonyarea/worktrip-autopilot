@@ -321,6 +321,57 @@ const ITINERARY_SCHEMA = {
               additionalProperties: false,
             },
           },
+          policy_flags: {
+            type: "object",
+            description:
+              "Where this option stands against policy, line by line, for the " +
+              "two lines actually booked. These must agree with `compliance`: " +
+              "nothing may be 'review' or 'over' on a compliant option, and an " +
+              "option that is not compliant must name the line responsible " +
+              "rather than flagging both out of caution.",
+            properties: {
+              flights: {
+                type: "string",
+                enum: ["pass", "review", "over"],
+                description:
+                  "pass: within policy. review: the organiser must weigh it. " +
+                  "over: exceeds a stated limit.",
+              },
+              hotel: {
+                type: "string",
+                enum: ["pass", "review", "over"],
+              },
+              details: {
+                type: "array",
+                description:
+                  "One entry for each line above that is not 'pass'; empty when " +
+                  "both pass. This is the agent explaining itself, not a table — " +
+                  "the row beside it already shows the figure.",
+                items: {
+                  type: "object",
+                  properties: {
+                    line: { type: "string", enum: ["flights", "hotel"] },
+                    note: {
+                      type: "string",
+                      description:
+                        "ONE sentence, under 25 words, carrying the figure, the " +
+                        "limit, the gap and the judgement together:\n" +
+                        "  '$215/night is $35 over the $180 limit, but still " +
+                        "within the 20% manager approval range.'\n" +
+                        "Lead with the number. Never open with 'This option' or " +
+                        "'The hotel'. No second sentence — the judgement is the " +
+                        "part only you can give, and it belongs in the same " +
+                        "breath as the arithmetic.",
+                    },
+                  },
+                  required: ["line", "note"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["flights", "hotel", "details"],
+            additionalProperties: false,
+          },
           details: {
             type: "object",
             properties: {
@@ -378,6 +429,7 @@ const ITINERARY_SCHEMA = {
           "total_cost",
           "policy_compliant",
           "policy_note",
+          "policy_flags",
           "features",
           "highlights",
           "rationale",

@@ -561,10 +561,10 @@ export function ConfirmAndBook({ onBack, onConfirm, tripId, onComplete }: Confir
                     </div>
                     <div>
                       <p className="text-sm text-[#1f2933] mb-0.5">
-                        Corporate card
+                        Amex Corporate Platinum
                       </p>
                       <p className="text-xs text-[#6a7282]">
-                        Visa •••• 4242
+                        •••• 3007 · exp 09/28
                       </p>
                     </div>
                   </div>
@@ -572,7 +572,7 @@ export function ConfirmAndBook({ onBack, onConfirm, tripId, onComplete }: Confir
                     Change
                   </button>
                 </div>
-                <div className="flex items-center justify-between p-4 bg-[#e8f9fb] border border-[#b8e9f0] rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-[#F6F3FE] border border-[#DFD6FA] rounded-xl">
                   <p className="text-sm text-[#1f2933] flex-1 pr-3">
                     Auto-fill purchase card forms and draft expense reports
                   </p>
@@ -580,7 +580,7 @@ export function ConfirmAndBook({ onBack, onConfirm, tripId, onComplete }: Confir
                     <input type="checkbox" defaultChecked className="peer sr-only" id="auto-fill-toggle" />
                     <label 
                       htmlFor="auto-fill-toggle" 
-                      className="block w-10 h-6 bg-[#1f2933] rounded-full cursor-pointer relative after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-0"
+                      className="block w-10 h-6 bg-[#D8D3E5] peer-checked:bg-[#916AF5] rounded-full cursor-pointer transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[#916AF5]/40 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform peer-checked:after:translate-x-4"
                     ></label>
                   </div>
                 </div>

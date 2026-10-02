@@ -9,6 +9,7 @@ import { TripTotalsCard } from "../TripTotalsCard";
 import { AirlineLogo } from "../AirlineLogo";
 import { Typewriter } from "../Typewriter";
 import { Reveal } from "../Reveal";
+import { DEV_TRIP_ID, devTrip } from "../../utils/devTrip";
 import {
   parseFlight,
   flightDuration,
@@ -109,6 +110,14 @@ export function EditItineraryinDetail({
     if (!tripId) {
       setLoading(false);
       setError("No trip selected");
+      return;
+    }
+
+    // The dev fixture, for looking at this screen without spending a
+    // generation. Exact id only — no screen falls back to it.
+    if (tripId === DEV_TRIP_ID) {
+      setTrip(devTrip());
+      setLoading(false);
       return;
     }
 
@@ -249,6 +258,8 @@ export function EditItineraryinDetail({
           className="mb-6"
           name={trip.trip_name || trip.inferred_trip_name || "Work Trip"}
           destination={trip.destination || trip.inferred_destination}
+          venue={(trip as any).venue}
+          venueAddress={(trip as any).venue_address}
           startDate={trip.start_date || trip.inferred_dates?.start_date}
           endDate={trip.end_date || trip.inferred_dates?.end_date}
           travelers={travelers}
@@ -256,7 +267,7 @@ export function EditItineraryinDetail({
           actions={
             <button
               onClick={onBack}
-              className="min-w-[54px] h-[28px] px-3 rounded-[8px] border border-[#C7BCEB] bg-white text-[#916AF5] text-[14px] font-medium shadow-[0px_1px_2px_0px_rgba(16,24,40,0.05)] hover:bg-[#F2F1F8] hover:border-[#916AF5] transition-colors"
+              className="h-8 px-3 rounded-lg border border-[rgba(0,0,0,0.1)] bg-[#f5f7fa] text-[14px] font-medium text-[#1f2933] hover:bg-gray-100 transition-colors"
             >
               Edit
             </button>
@@ -458,7 +469,7 @@ export function EditItineraryinDetail({
               <div className="mb-6">
                 {highlights.length > 0 && (
                   <div className="flex items-center gap-1.5 mb-3">
-                    <Sparkles className="w-4 h-4 text-[#916AF5]" strokeWidth={1.75} aria-hidden />
+                    <Sparkles className="w-4 h-4 text-[#916AF5] fill-[#916AF5]" strokeWidth={1.75} aria-hidden />
                     <p className="text-sm font-semibold text-[#101828] m-0">Agent Notes</p>
                   </div>
                 )}
@@ -520,10 +531,10 @@ export function EditItineraryinDetail({
                     </div>
                     <div>
                       <p className="text-sm text-[#1f2933] mb-0.5">
-                        Corporate card
+                        Amex Corporate Platinum
                       </p>
                       <p className="text-xs text-[#6a7282]">
-                        Visa •••• 4242
+                        •••• 3007 · exp 09/28
                       </p>
                     </div>
                   </div>
@@ -531,7 +542,7 @@ export function EditItineraryinDetail({
                     Change
                   </button>
                 </div>
-                <div className="flex items-center justify-between p-4 bg-[#e8f9fb] border border-[#b8e9f0] rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-[#F6F3FE] border border-[#DFD6FA] rounded-xl">
                   <p className="text-sm text-[#1f2933] flex-1 pr-3">
                     Auto-fill purchase card forms and draft expense reports
                   </p>
@@ -539,7 +550,7 @@ export function EditItineraryinDetail({
                     <input type="checkbox" defaultChecked className="peer sr-only" id="auto-fill-toggle-edit" />
                     <label
                       htmlFor="auto-fill-toggle-edit"
-                      className="block w-10 h-6 bg-[#1f2933] rounded-full cursor-pointer relative after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-0"
+                      className="block w-10 h-6 bg-[#D8D3E5] peer-checked:bg-[#916AF5] rounded-full cursor-pointer transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[#916AF5]/40 relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform peer-checked:after:translate-x-4"
                     ></label>
                   </div>
                 </div>
