@@ -19,7 +19,10 @@ export function AppShell({ children, currentNav = "Trips", onNavChange, onLogoCl
       />
       
       {/* Frosted Glass Top Navigation Bar */}
-      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/50 h-16 flex items-center px-4 sm:px-6 shadow-sm">
+      {/* The bar paints a tall band above itself as well as behind. Rubber-band
+          scrolling past the top otherwise pulls the page away and shows the
+          background through the gap, which reads as the bar coming unstuck. */}
+      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/50 h-16 flex items-center px-4 sm:px-6 shadow-sm before:content-[''] before:absolute before:left-0 before:right-0 before:bottom-full before:h-[50vh] before:bg-white/70 before:backdrop-blur-xl before:pointer-events-none">
         <div className="flex items-center gap-4 sm:gap-8 lg:gap-12 flex-1 min-w-0">
           <button 
             onClick={onLogoClick}

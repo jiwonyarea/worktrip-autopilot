@@ -10,8 +10,24 @@ import { EditItineraryinDetail } from "./components/screens/EditItineraryinDetai
 import { BookingInProgress } from "./components/screens/BookingInProgress";
 import { ConfirmAndBook } from "./components/screens/ConfirmAndBook";
 import { ExpensesReport } from "./components/screens/ExpensesReport";
+import { MyTrips } from "./components/screens/MyTrips";
+import { Policies } from "./components/screens/Policies";
 import { AppShell } from "./components/AppShell";
 import { DEV_TRIP_ID } from "./utils/devTrip";
+
+// Which nav item owns which screen. Planning runs through several screens that
+// all belong under "Plan a Trip", so the tab stays lit for the whole flow
+// rather than going dark the moment the agent starts working.
+const SCREEN_FOR_NAV: Record<string, string> = {
+  "Plan a Trip": "intent-capture",
+  "My Trips": "my-trips",
+  Policies: "policies",
+};
+
+const NAV_FOR_SCREEN: Record<string, string> = {
+  "my-trips": "My Trips",
+  policies: "Policies",
+};
 import { Toaster } from "./components/ui/sonner";
 import { Trip } from "./utils/tripApi";
 import "../styles/globals.css";
@@ -247,6 +263,18 @@ export default function App() {
           />
         );
       
+      case "my-trips":
+        return (
+          <MyTrips
+            onOpenTrip={handleOpenDemoTrip}
+            onOpenTripExpenses={handleOpenTripExpenses}
+            onPlanTrip={() => setCurrentScreen("intent-capture")}
+          />
+        );
+
+      case "policies":
+        return <Policies />;
+
       case "expenses":
         return (
           <ExpensesReport
@@ -266,9 +294,12 @@ export default function App() {
   };
 
   return (
-    <AppShell 
-      currentNav="Plan a Trip" 
-      onNavChange={() => setCurrentScreen("intent-capture")}
+    <AppShell
+      currentNav={NAV_FOR_SCREEN[currentScreen] ?? "Plan a Trip"}
+      onNavChange={(item) => {
+        const screen = SCREEN_FOR_NAV[item];
+        if (screen) setCurrentScreen(screen);
+      }}
       onLogoClick={handleBackToHome}
     >
       {/* Screens cross-fade into each other: the one leaving goes first, then
