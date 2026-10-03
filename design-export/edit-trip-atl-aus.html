@@ -1,0 +1,406 @@
+<title>Edit and finalize your itinerary — ATL to SXSW</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 48px 24px 64px;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #1f2933;
+    background: #ece9f8;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1088px; margin: 0 auto; }
+
+  /* ---------- header ---------- */
+  .header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
+  .header h1 {
+    font-family: Poppins, Inter, sans-serif;
+    font-weight: 500; font-size: 20px; line-height: 1.2; color: #0a0a0a; margin: 0;
+  }
+  .header p { font-size: 14px; color: #4a5565; margin: 4px 0 0; }
+  .back {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: 0 0 24px -8px; padding: 6px 8px; border-radius: 8px;
+    font-size: 14px; color: #4a5565;
+  }
+
+  /* ---------- trip card ---------- */
+  .trip-card {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.06);
+    padding: 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    margin-bottom: 24px;
+  }
+  .trip-card h3 { font-size: 16px; font-weight: 600; margin: 0 0 9px; }
+  .trip-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; color: #4a5565; }
+  .trip-meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .btn-ghost {
+    height: 32px; padding: 0 12px; border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1); background: #f5f7fa;
+    font-size: 14px; font-weight: 500; color: #1f2933; font-family: inherit;
+  }
+
+  /* ---------- shell ---------- */
+  .shell {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 24px; padding: 18px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex; gap: 18px; align-items: stretch;
+  }
+  @media (max-width: 1000px) { .shell { flex-direction: column; } }
+  .col-left { flex: 1; min-width: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; }
+  .col-right { width: 397px; flex-shrink: 0; display: flex; flex-direction: column; gap: 18px; }
+  @media (max-width: 1000px) { .col-right { width: 100%; } }
+
+  /* ---------- schedule ---------- */
+  .opt-head h3 { font-size: 16px; font-weight: 600; margin: 0 0 4px; }
+  .opt-head p { font-size: 14px; color: #4a5565; margin: 0 0 16px; }
+  .day { margin-bottom: 24px; }
+  .day > h4 { font-size: 16px; font-weight: 600; margin: 0 0 16px; }
+  .rail { position: relative; padding-left: 32px; }
+  .rail::before {
+    content: ""; position: absolute; left: 9px; top: 4px; bottom: 0;
+    width: 1px; background: #D8D3E5;
+  }
+  .item { margin-bottom: 16px; }
+  .item-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .item-title { display: flex; align-items: center; gap: 8px; position: relative; font-size: 16px; color: #1f2933; }
+  .item-title svg.pin { position: absolute; left: -32px; background: #fff; padding: 2px 0; color: #4a5565; }
+  .item-actions { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    padding: 6px; border-radius: 6px; border: 1px solid #e5e7eb;
+    background: #fff; color: #1f2933; line-height: 0;
+  }
+  .btn-edit {
+    border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 12px;
+    font-size: 14px; color: #1f2933; background: #fff; font-family: inherit;
+  }
+
+  .flight {
+    background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px;
+  }
+  .flight .top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .flight .logo { width: 32px; height: 32px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .flight .logo img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+  .flight .legs { display: flex; align-items: center; gap: 24px; flex: 1; min-width: 0; margin-right: 32px; }
+  .flight .end { text-align: center; }
+  .flight .end b { display: block; font-size: 14px; font-weight: 600; color: #101828; font-variant-numeric: tabular-nums; }
+  .flight .end span { display: block; font-size: 12px; color: #6a7282; }
+  .flight .mid { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .flight .mid i { font-style: normal; font-size: 10px; color: #6a7282; }
+  .flight .mid .bar { width: 100%; height: 1px; background: #d1d5db; margin: 4px 0; }
+  .flight .cabin { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 10px; color: #6a7282; flex-shrink: 0; }
+  .flight .carrier { font-size: 12px; color: #6a7282; margin: 0; }
+
+  .hotel { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+  .hotel .row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .hotel .photo { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .hotel .photo img { width: 100%; height: 100%; object-fit: cover; }
+  .hotel b { display: block; font-size: 14px; font-weight: 600; color: #101828; margin-bottom: 4px; }
+  .hotel .meta { font-size: 12px; color: #6a7282; margin: 0 0 4px; }
+  .hotel .desc { font-size: 12px; color: #6a7282; margin: 0; }
+  .hotel .foot {
+    padding-top: 12px; border-top: 1px solid #e5e7eb;
+    font-size: 12px; color: #6a7282; display: flex; align-items: center; gap: 6px;
+  }
+
+  .plain-sub { font-size: 14px; color: #6a7282; margin: 0; }
+
+  .notes { margin-bottom: 24px; }
+  .notes-head { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+  .notes-head span { font-size: 14px; font-weight: 600; color: #101828; }
+  .note { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 14px; color: #4a5565; }
+
+  .btn-confirm {
+    width: 100%; border: 0; border-radius: 12px; padding: 16px 32px;
+    background: #916af5; color: #fff; font-size: 16px; font-weight: 600; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .confirm-note { text-align: center; font-size: 14px; color: #1f2933; font-style: italic; margin: 12px 0 0; }
+
+  /* ---------- totals ---------- */
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; }
+  .card h3 { font-size: 16px; font-weight: 600; margin: 0 0 16px; }
+  .dial { position: relative; width: 200px; height: 104px; margin: 0 auto; }
+  .dial .readout { position: absolute; inset: auto 0 0 0; display: flex; flex-direction: column; align-items: center; padding-bottom: 5px; }
+  .dial .total { font-size: 26px; font-weight: 600; line-height: 1; color: #0a0a0a; font-variant-numeric: tabular-nums; }
+  .dial .verdict { display: flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 13px; font-weight: 600; line-height: 1; color: #1F9D55; }
+  .gap { height: 20px; }
+  .lines { display: flex; flex-direction: column; gap: 10px; }
+  .line { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .line .label { display: flex; align-items: center; gap: 4px; color: #4a5565; }
+  .line .amount { font-weight: 500; color: #1f2933; font-variant-numeric: tabular-nums; }
+  .line .muted { color: #9095a1; }
+  .chip-pass { border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 500; background: #e6f6ec; color: #167C3C; }
+
+  /* ---------- payment ---------- */
+  .pay-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 16px;
+  }
+  .pay-row .who { display: flex; align-items: center; gap: 12px; }
+  .pay-icon { width: 40px; height: 40px; border-radius: 8px; background: #e8f0fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pay-row b { display: block; font-size: 14px; font-weight: 400; color: #1f2933; margin-bottom: 2px; }
+  .pay-row small { font-size: 12px; color: #6a7282; }
+  .btn-change { background: #f5f7fa; border: 1px solid #e5e7eb; color: #1f2933; border-radius: 8px; padding: 8px 16px; font-size: 14px; font-weight: 500; font-family: inherit; }
+
+  .autofill {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px; background: #F6F3FE; border: 1px solid #DFD6FA; border-radius: 12px;
+  }
+  .autofill p { font-size: 14px; color: #1f2933; margin: 0; }
+  .toggle { width: 40px; height: 24px; border-radius: 999px; background: #916AF5; position: relative; flex-shrink: 0; }
+  .toggle::after { content: ""; position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 999px; background: #fff; }
+
+  .btn-policy {
+    width: 100%; height: 56px; padding: 12px 16px; border-radius: 12px;
+    background: rgba(31, 157, 85, 0.1); border: 1px solid rgba(31, 157, 85, 0.2);
+    color: #1f2933; font-size: 14px; font-family: inherit;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+</style>
+
+<div class="page">
+
+  <!-- ============ header ============ -->
+  <div class="header">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="#916AF5" stroke="#916AF5" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3 10.088 8.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+    <div>
+      <h1>Edit and finalize your itinerary</h1>
+      <p>Adjust your trip itinerary in detail before booking</p>
+    </div>
+  </div>
+
+  <div class="back">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    Back to options
+  </div>
+
+  <!-- ============ trip card ============ -->
+  <div class="trip-card">
+    <div>
+      <h3>SXSW Austin</h3>
+      <div class="trip-meta">
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>Austin Convention Center</span>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Mar 8 – 11, 2027</span>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>1 traveler</span>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Conference</span>
+      </div>
+    </div>
+    <button class="btn-ghost">Edit</button>
+  </div>
+
+  <!-- ============ shell ============ -->
+  <div class="shell">
+
+    <!-- -------- left: schedule -------- -->
+    <div class="col-left">
+      <div class="opt-head">
+        <h3>Balanced</h3>
+        <p>Delta both ways with an afternoon arrival, and a hotel inside the walkable ring.</p>
+      </div>
+
+      <!-- ----- departure day ----- -->
+      <div class="day">
+        <h4>Monday, March 8</h4>
+        <div class="rail">
+
+          <div class="item">
+            <div class="item-head">
+              <span class="item-title">
+                <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                Flight to Austin, TX
+              </span>
+              <span class="item-actions">
+                <span class="icon-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4m1.5 0v9a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 13V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <button class="btn-edit">Edit</button>
+              </span>
+            </div>
+
+            <div class="flight">
+              <div class="top">
+                <span class="logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAEfklEQVR4AWIYwWAUjIJRMApGwUMZSzlAe3YAGVUcB3D8bVu5VatBuq6gmhjqOKiqpEqsRSxQg11E6UYR0AYMqm0AG7aVBJEphkoVVajKFHd2Q9S2HVKhS7m4X9/HlTPP7uftf92/u8PnNoP37ovf//3eRkIRl2MD98MKhLnJT1TDAEit39FGGOF3GQxF2uCUWslvYG79jlWEmcwLMzkUiqyCU0ruR0kRZoAw8jcM+PtARYchyi5kPMJksKsiwxAkgDcQjzCuNwhUYphuiHcYAN0VFYYYYaQVYdIIV0QYQtTjMUQRxvUY9ZUQ5jREHQY4XdZhiLARn32E+YyN5RxmDOIjjGusLMMQ4DjEdxjgeDmFcaME8dFAmI8IllOYUYiBMK5Ru8Poo7QhazBMFm12htFHaUIcYiwMEEfT/xymH2I8DNBvVxh9lN34WcQwP7HbujCKzfkVpGhhgFcI/E9huiHFC1P8DbwYUbYg/Q/DpLHF5jBulDo8ghgJo/cIdTaHOQsxGkbvrI1h3Cgb8KWEYb5gg41hbkNKFga4bT6Mgc3ZgjDGNnBTm/OMRWFmELQhzCjEojBGNvDFRmmFWBcGaDUfRr85JywOk0BTKcL0QawNA/QZD6PYnDOwPUzG7wbud3N+CTEcZpww40bDAC/9bODF25z17hHmIBwXYQ5ynXsQPfMbuJ//OX+HGPAU7aiBk49r1aAdTyEGfEfYVxhFlFo8NBDkGdpRC2chXLcW7XhmIM5D1BYjTAyyCM9xDHVwtHKB6nAMzyGLENOH0UXZhE8QH96hUxtEEagT7yA+fMImI2FyM2DMZ5CTWAanEE6l5ZxKLqcQ7msZTvoMNIYaE2FOQLTwVh0EWMNpdJ4wCb50glPpPNddA0fhT6C3EC2cKBhGsTlPQxSmcAoNyiDN6MWsxwPeLHrRrAzUgFOYgihMI7iYMFcVQZLowkplkG0YxlfFk+9XDGObMtBKdCGpiHPVRxjV5pxEDI2KGDU4hDvI+FgJMriDQ5r5gEbEFIFa9WGQ+7JTEA/v0aUMEkAHnhjclZ6gAwFloC68h3iYQiPUYQYg80zjIlZrBiouIF7EJTKOC8pBvRoXMQ2ZZ0AVhhvdiV+QnBn0IKgI0oJLmPuH2/UcLqFFESiIHsxAcn5h54JhcifKBASz6MFaRZDtuIZvJXzt8A3XsF0RaO28QBNoWCjMFfxAH9YViLEERzCOrEXvY7IYxxEsUQS6jB+44hkm77lic4EgKxDFC9tfVOEFolhRINBm9KLZK0y9cqAmIIDtYQAklIO6HuqVoAX9SEEAy8LopdCvGdQLBdmDG0hDAMvD6KVxA3s0YdwYS3EUdxUD1d4welncxVEsnR/GDRLCOcUDmf1h/IvjHEJw3CiHcQtJTGIiz2s88OE+rmMYI4Wk8AGEGRnEkM4wruM+HvjwGhN5JpHELRx2w+xFDGcQRWdOFB04gP1qwD5EsBXhQlL4AMKEBzGksxUR7MN+NeAAOhBFZ04UZxDDXq/BU4VqBHvCVMNUw1TDVMNU/QYHj7VXXEpf2wAAAABJRU5ErkJggg==" alt="Delta" /></span>
+                <span class="legs">
+                  <span class="end"><b>09:40</b><span>ATL</span></span>
+                  <span class="mid"><i>2h 39m</i><span class="bar"></span><i>Nonstop</i></span>
+                  <span class="end"><b>11:19</b><span>AUS</span></span>
+                </span>
+                <span class="cabin"><span>Economy</span><span>Nonstop</span></span>
+              </div>
+              <p class="carrier">Delta · DL 2886</p>
+            </div>
+          </div>
+
+          <div class="item">
+            <div class="item-head">
+              <span class="item-title">
+                <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg>
+                3-night stay in Austin, TX
+              </span>
+              <span class="item-actions">
+                <span class="icon-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4m1.5 0v9a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 13V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <button class="btn-edit">Edit</button>
+              </span>
+            </div>
+
+            <div class="hotel">
+              <div class="row">
+                <span class="photo"><img src="data:image/jpeg;base64,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" alt="" /></span>
+                <span>
+                  <b>Hotel Ella</b>
+                  <p class="meta">4.7★ · 1.1 mi to venue · Austin, TX</p>
+                  <p class="desc">Historic mansion hotel on Pecan Walk, 20 minutes on foot to the convention centre.</p>
+                </span>
+              </div>
+              <div class="foot">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18m-9 6 2 2 4-4"/></svg>
+                Free cancellation up to 24 hours before check-in
+              </div>
+            </div>
+          </div>
+
+          <div class="item">
+            <div class="item-head">
+              <span class="item-title">
+                <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2l.64-2.54a6 6 0 0 0 0-2.92l-1.07-4.27A3 3 0 0 0 17.66 5H4a2 2 0 0 0-2 2v10h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+                Ground Transport
+              </span>
+            </div>
+            <p class="plain-sub">$80/day × 3 days = $240</p>
+          </div>
+
+          <div class="item">
+            <div class="item-head">
+              <span class="item-title">
+                <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V2M5 11v11M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+                Food
+              </span>
+            </div>
+            <p class="plain-sub">$133/day × 3 days = $399</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ----- return day ----- -->
+      <div class="day">
+        <h4>Thursday, March 11</h4>
+        <div class="rail">
+          <div class="item">
+            <div class="item-head">
+              <span class="item-title">
+                <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                Flight to Atlanta, GA
+              </span>
+              <span class="item-actions">
+                <span class="icon-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V4m1.5 0v9a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 13V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <button class="btn-edit">Edit</button>
+              </span>
+            </div>
+
+            <div class="flight">
+              <div class="top">
+                <span class="logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAEfklEQVR4AWIYwWAUjIJRMApGwUMZSzlAe3YAGVUcB3D8bVu5VatBuq6gmhjqOKiqpEqsRSxQg11E6UYR0AYMqm0AG7aVBJEphkoVVajKFHd2Q9S2HVKhS7m4X9/HlTPP7uftf92/u8PnNoP37ovf//3eRkIRl2MD98MKhLnJT1TDAEit39FGGOF3GQxF2uCUWslvYG79jlWEmcwLMzkUiqyCU0ruR0kRZoAw8jcM+PtARYchyi5kPMJksKsiwxAkgDcQjzCuNwhUYphuiHcYAN0VFYYYYaQVYdIIV0QYQtTjMUQRxvUY9ZUQ5jREHQY4XdZhiLARn32E+YyN5RxmDOIjjGusLMMQ4DjEdxjgeDmFcaME8dFAmI8IllOYUYiBMK5Ru8Poo7QhazBMFm12htFHaUIcYiwMEEfT/xymH2I8DNBvVxh9lN34WcQwP7HbujCKzfkVpGhhgFcI/E9huiHFC1P8DbwYUbYg/Q/DpLHF5jBulDo8ghgJo/cIdTaHOQsxGkbvrI1h3Cgb8KWEYb5gg41hbkNKFga4bT6Mgc3ZgjDGNnBTm/OMRWFmELQhzCjEojBGNvDFRmmFWBcGaDUfRr85JywOk0BTKcL0QawNA/QZD6PYnDOwPUzG7wbud3N+CTEcZpww40bDAC/9bODF25z17hHmIBwXYQ5ynXsQPfMbuJ//OX+HGPAU7aiBk49r1aAdTyEGfEfYVxhFlFo8NBDkGdpRC2chXLcW7XhmIM5D1BYjTAyyCM9xDHVwtHKB6nAMzyGLENOH0UXZhE8QH96hUxtEEagT7yA+fMImI2FyM2DMZ5CTWAanEE6l5ZxKLqcQ7msZTvoMNIYaE2FOQLTwVh0EWMNpdJ4wCb50glPpPNddA0fhT6C3EC2cKBhGsTlPQxSmcAoNyiDN6MWsxwPeLHrRrAzUgFOYgihMI7iYMFcVQZLowkplkG0YxlfFk+9XDGObMtBKdCGpiHPVRxjV5pxEDI2KGDU4hDvI+FgJMriDQ5r5gEbEFIFa9WGQ+7JTEA/v0aUMEkAHnhjclZ6gAwFloC68h3iYQiPUYQYg80zjIlZrBiouIF7EJTKOC8pBvRoXMQ2ZZ0AVhhvdiV+QnBn0IKgI0oJLmPuH2/UcLqFFESiIHsxAcn5h54JhcifKBASz6MFaRZDtuIZvJXzt8A3XsF0RaO28QBNoWCjMFfxAH9YViLEERzCOrEXvY7IYxxEsUQS6jB+44hkm77lic4EgKxDFC9tfVOEFolhRINBm9KLZK0y9cqAmIIDtYQAklIO6HuqVoAX9SEEAy8LopdCvGdQLBdmDG0hDAMvD6KVxA3s0YdwYS3EUdxUD1d4welncxVEsnR/GDRLCOcUDmf1h/IvjHEJw3CiHcQtJTGIiz2s88OE+rmMYI4Wk8AGEGRnEkM4wruM+HvjwGhN5JpHELRx2w+xFDGcQRWdOFB04gP1qwD5EsBXhQlL4AMKEBzGksxUR7MN+NeAAOhBFZ04UZxDDXq/BU4VqBHvCVMNUw1TDVMNU/QYHj7VXXEpf2wAAAABJRU5ErkJggg==" alt="Delta" /></span>
+                <span class="legs">
+                  <span class="end"><b>14:05</b><span>AUS</span></span>
+                  <span class="mid"><i>2h 23m</i><span class="bar"></span><i>Nonstop</i></span>
+                  <span class="end"><b>17:28</b><span>ATL</span></span>
+                </span>
+                <span class="cabin"><span>Economy</span><span>Nonstop</span></span>
+              </div>
+              <p class="carrier">Delta · DL 1377</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ----- agent notes ----- -->
+      <div class="notes">
+        <div class="notes-head">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#916AF5" stroke="#916AF5" stroke-width="1.75" stroke-linejoin="round"><path d="M12 3 10.088 8.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+          <span>Agent Notes</span>
+        </div>
+        <div class="note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52c93f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>Lands 11:19, ahead of the first afternoon session</span>
+        </div>
+        <div class="note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52c93f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M20 6 9 17l-5-5"/></svg>
+          <span>Delta both ways, so one airline holds the whole trip</span>
+        </div>
+        <div class="note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:2px"><path d="M5 12h14"/></svg>
+          <span>Leaves before Thursday's closing keynote</span>
+        </div>
+      </div>
+
+      <button class="btn-confirm">Confirm &amp; Complete Booking</button>
+      <p class="confirm-note">Don't worry! All reservations can be cancelled within 24 hours.</p>
+    </div>
+
+    <!-- -------- right: money -------- -->
+    <div class="col-right">
+
+      <div class="card">
+        <h3>Trip total &amp; Compliance</h3>
+        <div class="dial">
+          <svg viewBox="0 0 200 104" width="200" height="104">
+            <defs>
+              <linearGradient id="g-ok" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#50C743" />
+                <stop offset="100%" stop-color="#1FA59A" />
+              </linearGradient>
+            </defs>
+            <path d="M 24 92 A 76 76 0 0 1 176 92" fill="none" stroke="#eceef2" stroke-width="10" stroke-linecap="round" />
+            <path d="M 24 92 A 76 76 0 0 1 176 92" fill="none" stroke="url(#g-ok)" stroke-width="10" stroke-linecap="round"
+                  stroke-dasharray="238.76" stroke-dashoffset="109.1" />
+          </svg>
+          <div class="readout">
+            <span class="total">$999</span>
+            <span class="verdict">
+              <svg viewBox="0 0 20 20" width="15" height="15"><circle cx="10" cy="10" r="9" fill="#1F9D55"/><path d="M5.9 10.3 8.6 13 14.1 7.4" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Compliant
+            </span>
+          </div>
+        </div>
+        <div class="gap"></div>
+        <div class="lines">
+          <div class="line"><span class="label">Flights <span class="chip-pass">Pass</span></span><span class="amount">$457</span></div>
+          <div class="line"><span class="label">Hotels (3 nights) <span class="chip-pass">Pass</span></span><span class="amount">$542</span></div>
+          <div class="line"><span class="label">Ground Transportation</span><span class="amount">$0 <span class="muted">/ $240</span></span></div>
+          <div class="line"><span class="label">Food</span><span class="amount">$0 <span class="muted">/ $399</span></span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Payment method</h3>
+        <div class="pay-row">
+          <span class="who">
+            <span class="pay-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#1246a5" stroke-width="1.67"><rect x="2" y="4" width="16" height="12" rx="2"/><line x1="2" y1="8" x2="18" y2="8"/></svg>
+            </span>
+            <span>
+              <b>Amex Corporate Platinum</b>
+              <small>•••• 3007 · exp 09/28</small>
+            </span>
+          </span>
+          <button class="btn-change">Change</button>
+        </div>
+        <div class="autofill">
+          <p>Auto-fill purchase card forms and draft expense reports</p>
+          <span class="toggle"></span>
+        </div>
+      </div>
+
+      <button class="btn-policy">
+        <span>View Policy Details</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+
+    </div>
+  </div>
+</div>

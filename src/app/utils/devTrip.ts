@@ -97,7 +97,7 @@ export function devTrip(): any {
         policy_flags: { flights: "pass", hotel: "pass", details: [] },
         highlights: [
           { type: "pro", text: "$612 under budget, enough for a fourth traveller" },
-          { type: "con", text: "One stop in Dallas each way, 3h longer" },
+          { type: "con", text: "One stop in Chicago each way, 3h longer" },
           { type: "con", text: "25-minute bus to the venue each morning" },
         ],
         details: {
